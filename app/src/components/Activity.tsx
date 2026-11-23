@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Boxes, CircleCheck, CircleX, Cpu, Database, Fingerprint, Globe, KeyRound, Lock, Send, ShieldCheck } from 'lucide-react';
 import { onTrace, TraceEvent } from '../lib/trace';
+import { txUrl } from '../lib/wallet';
 
 const ICON: Record<string, any> = { crypto: KeyRound, ipfs: Database, chain: Boxes, zk: Cpu, net: Send, id: Fingerprint, ok: CircleCheck, fail: CircleX };
 const TONE: Record<string, string> = {
@@ -62,7 +63,7 @@ export function ActivityLog({ since = 0, until = Infinity, compact = false, empt
               <div className={`flex items-center gap-1.5 flex-wrap ${compact ? 'text-[12px]' : 'text-[13px]'}`}>
                 <span className="font-medium">{e.title}</span>
                 <VisChip vis={e.vis} />
-                <span className="text-[10px] text-muted uppercase tracking-wider">{e.where}</span>
+                <span className="text-[10px] text-muted">{e.where}</span>
               </div>
               {e.detail && <div className={`text-muted ${compact ? 'text-[11px]' : 'text-[11.5px]'} leading-snug break-words`}>{e.detail}</div>}
               {(e.tx || e.wire) && (
@@ -72,7 +73,14 @@ export function ActivityLog({ since = 0, until = Infinity, compact = false, empt
                       <ArrowUpRight size={10} /> {e.wire}
                     </span>
                   )}
-                  {e.tx && <span className="text-sky">tx {e.tx.slice(0, 10)}…</span>}
+                  {e.tx &&
+                    (txUrl(e.tx) ? (
+                      <a className="text-sky underline underline-offset-2" href={txUrl(e.tx)!} target="_blank" rel="noreferrer">
+                        tx {e.tx.slice(0, 10)}…
+                      </a>
+                    ) : (
+                      <span className="text-sky">tx {e.tx.slice(0, 10)}…</span>
+                    ))}
                   {e.block != null && <span>block #{e.block}</span>}
                   {!!e.gas && <span>{e.gas.toLocaleString()} gas</span>}
                 </div>

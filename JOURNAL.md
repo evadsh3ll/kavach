@@ -294,3 +294,71 @@ Steps no longer auto-advance in scene view, so each animation can finish. `V` sw
 
 **Checked:** `scene.mjs` (new, screenshots every scene) · `story.mjs` (device view) 10/10 · `roles.mjs` 16/16 ·
 attacks 14/14.
+
+## 16. Round 5: de-slop the UI
+
+Researched what makes interfaces look AI-generated: serif + sans on beige, letter-spaced uppercase labels, cards
+inside cards, rows of stat cards, coloured left-edge stripes, many accent colours cycling, pill badges everywhere,
+icons before every heading, spring/bounce motion, dot-grid backgrounds. Kavach-era Mohar hit most of them.
+
+New system, "clinical record" (`app/src/index.css`):
+- **Type:** IBM Plex Sans for everything, Plex Mono only for hashes and keys.
+- **Colour:** neutral off-white page, near-black ink. Green = valid/paid, red = blocked, ochre = waiting. The gold
+  seal is the only brand accent. The old token names are remapped, so private/public no longer use extra hues.
+- **Surfaces:** sections are separated by a hairline rule, not boxes. Stats are a statement row with a top rule.
+  Radius is 5–6 px, with no drop shadows except menus. Empty states are plain text.
+- **Navigation:** a text header with an underline for the active tab, and the role shown as "Patient Asha Verma ▾".
+  The sign-in screen is a directory table instead of 16 cards.
+- **Motion:** short ease-out, no springs, no pulsing. The Story scene uses neutral people and rooms.
+
+Tests: `roles.mjs` 16/16 · `story.mjs` 10/10 · attacks 14/14. `smoke.mjs` and `roles.mjs` selectors were updated
+for the new markup.
+
+## 17. Round 6: MetaMask + role wallets + Base Sepolia
+
+- **Role wallets:** `scripts/make-wallets.mjs` creates fresh keys (`.role-wallets.json`, gitignored). `demo.sh`
+  funds each with 100 test ETH and deploys with the regulator's key. The seed writes `ROLE-WALLETS.local.md`
+  (addresses, private keys, network) for MetaMask import. The patients keep their Aadhaar-bound wallets, because an
+  Anon Aadhaar proof's signal is the wallet address. Hospital secrets, and so the staff keys, are now derived from the
+  regulator key, so they stay stable across restarts.
+- **MetaMask sign-in** (`app/src/lib/wallet.ts`):
+  - Connect, then map each address to its role, then sign a one-time challenge.
+  - Every contract call goes through a MetaMask signer. Gas is estimated on our RPC first, so a revert shows its
+    reason before a pop-up appears.
+  - Encryption (ECIES) keys and per-policy consent keys come from a deterministic `personal_sign`
+    (`encryptionKeyFor` in the SDK). The seed registers those derived keys, so MetaMask and the demo keys agree.
+  - Each tab can be a different MetaMask account.
+  - Story, the Attack Lab and X-Ray force built-in keys. `?as=` links use demo wallets.
+- **Base Sepolia:** a teammate's deploy settled a ₹73,800 claim there. It predates the derived keys and the lab and
+  pharmacy roles, so `deploy-testnet.sh` now also makes Aadhaar proofs for the fresh patient keys. `run-testnet.sh`
+  runs the API and app against the deployment, and tx hashes link to BaseScan.
+- **Tested:**
+  - `e2e/metamask.mjs`: a scripted EIP-1193 wallet, every role signs through MetaMask, 10/10, ~21 prompts.
+  - `roles.mjs` 16/16 · `story.mjs` 10/10 · attacks 14/14 · forge 31/31 · SDK 12/12 · leak test PASS.
+
+## 18. Round 7: live on Base Sepolia with MetaMask
+
+Redeployed with the current code from a deployer holding only 0.001 ETH. The script's funding was sized to real
+costs: the whole deploy is ~14M gas ≈ 0.00014 ETH at 0.006–0.01 gwei, and each role gets only what it needs.
+`ClaimSettlement` is at `0x89f4C64836068f613183B58853491CE9ad7c2580`.
+
+- **Patient Aadhaar proofs for the fresh testnet wallets.** Generating them was OOM-killed at 6.3 GB because
+  snarkjs starts a worker per CPU. `sdk/scripts/few-cpus.cjs` caps it at 2 workers: ~55 s per proof.
+- **Problems that only show up on a public network:**
+  1. The RPC caps `eth_getLogs` at 200 blocks. The API now runs an **event indexer** (chunked catch-up, in memory),
+     and the app routes every log query to it.
+  2. Server-side filters (`contract.on`) aren't kept by load-balanced RPCs. Ghost Pay now polls in chunks.
+  3. Stalled requests: ethers waits 5 min by default, which hung the indexer and therefore every history screen.
+     Server and app now use 15 s timeouts with retries for transient errors, `/api/logs` never waits more than 1.5 s,
+     and the API logs unhandled RPC errors instead of crashing.
+  4. Lagging nodes return null for just-mined blocks and hand out stale nonces. The insurer desk tolerates nulls, and
+     the relayer resets its nonce, retries, and polls for the receipt so a settled claim is never reported as failed.
+  5. **Browser connection starvation:** Chrome allows ~6 connections per site across all tabs. Overlapping polls on
+     a slow network starved new tabs. `useAsync` now never overlaps polls and pauses in hidden tabs, so a presenter
+     can keep several role tabs open.
+- **RPC:** switched to `base-sepolia-rpc.publicnode.com` (faster, no log-range cap).
+- **Data isolation:** testnet data lives in `server/data-84532` and `.demo-84532.json`, so `demo.sh` can't wipe it.
+  `sdk/scripts/renew-policy.ts` gives a demo patient a fresh, full policy after test claims use up her cover.
+- **Tests:**
+  - `e2e/metamask.mjs` **on Base Sepolia: 10/10**, every role signing through the scripted MetaMask.
+  - Local: MetaMask 10/10 · roles 16/16 · story 10/10 · attacks 14/14.

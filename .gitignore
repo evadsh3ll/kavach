@@ -1,8 +1,12 @@
 node_modules/
 .logs/
 .testnet-keys.json
+.role-wallets.json
+ROLE-WALLETS.*.md
+.demo-*.json
 .zcash-tools/
 server/data/
+server/data-*/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
