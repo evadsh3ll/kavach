@@ -255,7 +255,7 @@ function Inbox({ who }: { who: Role }) {
           if (!o) return null;
           const p = o.payload;
           return (
-            <div key={i.id} className="rounded-xl border border-violet/50 bg-violet/5 p-4 fade-in">
+            <div key={i.id} className="rounded-md border border-violet/50 bg-violet/5 p-4 fade-in">
               <div className="flex flex-wrap justify-between gap-4">
                 <div>
                   <div className="text-sm text-muted">{p.hospital} asks you to approve</div>
@@ -366,10 +366,9 @@ function Records({ who }: { who: Role }) {
       {err && <div className="text-[13px] text-rose mb-3">Blocked: {err}</div>}
       <div className="space-y-3">
         {(data ?? []).map((r) => (
-          <div key={r.id} className="rounded-xl border border-line p-4">
+          <div key={r.id} className="rounded-md border border-line p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                {r.kind === 'emergency-card' ? <LifeBuoy size={18} className="text-rose" /> : <FileHeart size={18} className="text-muted" />}
                 <div>
                   <div className="font-semibold">{label(r.kind)}</div>
                   <div className="text-xs text-muted">

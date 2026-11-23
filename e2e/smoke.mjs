@@ -53,7 +53,7 @@ if (process.argv.includes('--attacks')) {
   await page.getByRole('button', { name: /Run all/ }).click();
   await page.waitForFunction(() => document.querySelectorAll('.chip').length > 0 && !document.querySelector('.animate-spin'), null, { timeout: 300000 });
   await page.waitForTimeout(500);
-  const results = await page.$$eval('section.card', (els) =>
+  const results = await page.$$eval('main section', (els) =>
     els.map((e) => `${e.querySelector('.font-semibold')?.textContent} → ${[...e.querySelectorAll('.chip')].map((c) => c.textContent).join(' | ')} :: ${e.querySelector('.mono')?.textContent ?? ''}`),
   );
   console.log(results.join('\n'));

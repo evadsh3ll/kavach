@@ -15,6 +15,7 @@ import { DemoGuide } from './components/DemoGuide';
 import { QrImage } from './components/Qr';
 import { identities, Identity, KIND_META, Kind, setIdentity, signIn, useIdentity } from './lib/session';
 import { getDemo, short } from './lib/chain';
+import { setForceDemo, walletMode } from './lib/wallet';
 
 const ROLE_PAGES: Record<string, Kind[]> = {
   vault: ['patient'],
@@ -54,6 +55,8 @@ export function App() {
     return () => window.removeEventListener('hashchange', f);
   }, []);
   const go = (p: string) => (location.hash = '/' + p);
+  // presenter screens run hands-free on built-in keys, even if this tab signed in with MetaMask
+  setForceDemo(['story', 'attack', 'xray'].includes(page));
   const isRolePage = page in ROLE_PAGES;
   const group = page === 'story' ? 'story' : SECURITY.some((s) => s.id === page) ? 'security' : 'live';
   const lab = group === 'security';
@@ -88,43 +91,41 @@ export function App() {
 
   return (
     <div className={`min-h-screen ${lab ? 'lab' : ''}`}>
-      <header className="sticky top-0 z-40 h-[57px] border-b border-line bg-ink/85 backdrop-blur flex items-center px-5 gap-4">
-        <button onClick={() => go('story')} className="flex items-center gap-2.5 shrink-0">
-          <Logo />
-          <span className="serif text-[22px] leading-none tracking-tight">Mohar</span>
+      <header className="sticky top-0 z-40 h-[52px] border-b border-line bg-ink flex items-center px-6 gap-8">
+        <button onClick={() => go('story')} className="flex items-center gap-2 shrink-0">
+          <Logo size={22} />
+          <span className="text-[16px] font-semibold tracking-[-0.02em]">Mohar</span>
         </button>
-        <nav className="flex items-center gap-1 p-1 rounded-xl border border-line bg-panel shrink-0">
-          <Seg on={group === 'story'} onClick={() => go('story')} icon={<Play size={14} />}>
+        <nav className="flex items-center gap-6 h-full text-[14px]">
+          <Tab on={group === 'story'} onClick={() => go('story')}>
             Story
-          </Seg>
-          <Seg on={group === 'live'} onClick={() => go(me ? me.page : 'login')} icon={<Users size={14} />}>
+          </Tab>
+          <Tab on={group === 'live'} onClick={() => go(me ? me.page : 'login')}>
             Live demo
-          </Seg>
-          <Seg on={group === 'security'} onClick={() => go(lab ? page : 'attack')} icon={<FlaskConical size={14} />}>
-            Security lab
-          </Seg>
+          </Tab>
+          <Tab on={group === 'security'} onClick={() => go(lab ? page : 'attack')}>
+            Security
+          </Tab>
+          {group === 'security' && (
+            <span className="flex items-center gap-4 text-[13px] text-muted pl-6 border-l border-line h-5">
+              {SECURITY.map((r) => (
+                <button key={r.id} onClick={() => go(r.id)} className={page === r.id ? 'text-text font-medium' : 'hover:text-text'}>
+                  {r.label}
+                </button>
+              ))}
+            </span>
+          )}
         </nav>
-        {group === 'security' && (
-          <div className="flex items-center gap-1">
-            {SECURITY.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => go(r.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] ${page === r.id ? 'bg-panel border border-line font-semibold' : 'text-muted hover:text-fg'}`}
-              >
-                <r.icon size={14} strokeWidth={1.7} /> {r.label}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-5 text-[13px]">
           {group === 'live' && (
-            <button className="btn btn-ghost !py-1.5 !px-2.5 !text-[12.5px]" onClick={togglePanel} title="Demo guide & what's happening under the hood">
-              {panel ? <PanelRightClose size={15} /> : <PanelRightOpen size={15} />} {panel ? 'Hide' : 'Guide & activity'}
+            <button className="text-muted hover:text-text" onClick={togglePanel}>
+              {panel ? 'Hide guide' : 'Show guide'}
             </button>
           )}
-          {me ? <RoleChip me={me} go={go} /> : group === 'live' ? null : (
-            <button className="btn btn-ghost !py-1.5 !text-[12.5px]" onClick={() => go('login')}>
+          {me ? (
+            <RoleChip me={me} go={go} />
+          ) : group === 'live' ? null : (
+            <button className="text-muted hover:text-text" onClick={() => go('login')}>
               Sign in
             </button>
           )}
@@ -133,8 +134,8 @@ export function App() {
       {page === 'story' ? (
         body
       ) : (
-        <div className={`flex ${showPanel ? '' : ''}`}>
-          <main className="flex-1 min-w-0 px-6 md:px-10 py-8">
+        <div className="flex">
+          <main className="flex-1 min-w-0 px-6 md:px-12 py-10">
             <div className="max-w-6xl mx-auto">{body}</div>
           </main>
           {showPanel && <SidePanel go={go} />}
@@ -153,29 +154,25 @@ function SidePanel({ go }: { go: (p: string) => void }) {
   }, [tab, ev.length]);
   const unread = tab === 'guide' ? ev.length - seen : 0;
   return (
-    <aside className="w-[340px] shrink-0 border-l border-line bg-panel/70 sticky top-[57px] h-[calc(100vh-57px)] flex flex-col">
-      <div className="flex p-2 gap-1 border-b border-line">
-        <button onClick={() => setTab('guide')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12.5px] ${tab === 'guide' ? 'bg-text text-ink font-semibold' : 'text-muted hover:text-fg'}`}>
-          <ListChecks size={14} /> Demo guide
-        </button>
-        <button onClick={() => setTab('hood')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[12.5px] ${tab === 'hood' ? 'bg-text text-ink font-semibold' : 'text-muted hover:text-fg'}`}>
-          <Cpu size={14} /> Under the hood
-          {unread > 0 && <span className="chip bg-violet text-white !py-0 !px-1.5 !text-[10px]">{unread}</span>}
-        </button>
+    <aside className="w-[320px] shrink-0 border-l border-line sticky top-[52px] h-[calc(100vh-52px)] flex flex-col">
+      <div className="flex gap-5 px-5 h-11 items-end border-b border-line text-[13px]">
+        <Tab on={tab === 'guide'} onClick={() => setTab('guide')}>
+          Demo guide
+        </Tab>
+        <Tab on={tab === 'hood'} onClick={() => setTab('hood')}>
+          Under the hood{unread > 0 && <span className="ml-1.5 text-muted">{unread}</span>}
+        </Tab>
       </div>
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto px-5 py-4">
         {tab === 'guide' ? (
           <>
-            <p className="text-[12px] text-muted mb-2 leading-snug">The full workflow, step by step. Ticks come from the live chain. Each step tells you which role to sign in as.</p>
+            <p className="text-[12.5px] text-muted mb-3 leading-snug">The whole workflow. Each step is ticked from the live chain and says which role to sign in as.</p>
             <DemoGuide go={go} />
           </>
         ) : (
           <>
-            <p className="text-[12px] text-muted mb-3 leading-snug">
-              Every real operation in this tab — encryption, IPFS, proofs, transactions — and whether its data <b className="text-violet">stays on the device</b>,{' '}
-              <b className="text-amber">leaves encrypted</b> or is <b className="text-sky">public</b>.
-            </p>
-            <ActivityLog empty="Do something in this role — it shows up here." />
+            <p className="text-[12.5px] text-muted mb-4 leading-snug">Every real operation in this tab, and whether its data stays on the device, leaves encrypted, or is public.</p>
+            <ActivityLog empty="Do something in this role and it shows up here." />
           </>
         )}
       </div>
@@ -193,21 +190,17 @@ function RoleChip({ me, go }: { me: Identity; go: (p: string) => void }) {
   const quick = identities().filter((i) => ['patient', 'hospital-1', 'insurer', 'doctor', 'lab', 'pharmacy', 'regulator', 'responder', 'guardian1', 'guardian2', 'patient2'].includes(i.id));
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 pl-2.5 pr-2 py-1 rounded-xl border border-line bg-panel hover:border-text/40" style={{ boxShadow: `inset 3px 0 0 ${m.color}` }}>
-        <div className="text-left leading-tight">
-          <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: m.color }}>
-            {m.label}
-          </div>
-          <div className="text-[12.5px] font-semibold max-w-[200px] truncate">{me.name}</div>
-        </div>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 hover:text-text">
+        <span className="text-muted">{m.label}</span>
+        <span className="font-medium max-w-[220px] truncate">{me.name}</span>
         <ChevronDown size={14} className="text-muted" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 z-50 card p-2 w-[300px] shadow-xl">
+          <div className="absolute right-0 mt-3 z-50 card p-2 w-[300px] shadow-[0_12px_32px_-12px_rgba(20,21,23,.25)]">
             <div className="px-2 py-1.5 text-[11.5px] text-muted">
-              Signed in{addr ? <> · wallet <span className="mono">{short(addr, 4)}</span></> : ' · no on-chain wallet (hospital staff key)'}
+              Signed in with {walletMode() === 'metamask' ? 'MetaMask' : 'a demo wallet'}{addr ? <> · <span className="mono">{short(addr, 4)}</span></> : ' · hospital staff key'}
             </div>
             <div className="flex gap-1 px-1 pb-2 border-b border-line">
               <button className="btn btn-ghost !py-1 !px-2 !text-[12px] flex-1 justify-center" onClick={() => (setQr(true), setOpen(false))}>
@@ -240,7 +233,6 @@ function RoleChip({ me, go }: { me: Identity; go: (p: string) => void }) {
                     go(i.page);
                   }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: KIND_META[i.kind].color }} />
                   <span className="font-medium truncate">{i.name}</span>
                   <span className="ml-auto text-[10.5px] text-muted">{KIND_META[i.kind].label}</span>
                 </button>
@@ -290,10 +282,9 @@ function WrongRole({ me, page, go }: { me: Identity; page: string; go: (p: strin
   );
 }
 
-function Seg({ on, onClick, icon, children }: { on: boolean; onClick: () => void; icon: ReactNode; children: ReactNode }) {
+function Tab({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button onClick={onClick} className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition whitespace-nowrap ${on ? 'bg-text text-ink' : 'text-muted hover:text-fg'}`}>
-      {icon}
+    <button onClick={onClick} className={`h-full flex items-center border-b-2 -mb-px transition-colors ${on ? 'border-text text-text font-medium' : 'border-transparent text-muted hover:text-text'}`}>
       {children}
     </button>
   );
@@ -316,15 +307,12 @@ export function Logo({ size = 30 }: { size?: number }) {
   );
 }
 
-export function PageHeader({ icon, title, sub, right }: { icon?: ReactNode; title: string; sub: string; right?: ReactNode }) {
+export function PageHeader({ title, sub, right }: { icon?: ReactNode; title: string; sub: string; right?: ReactNode }) {
   return (
-    <header className="flex items-end justify-between gap-6 mb-7 flex-wrap">
-      <div className="flex gap-4 items-start">
-        {icon && typeof icon !== 'string' && <div className="w-11 h-11 rounded-xl border border-line bg-panel grid place-items-center shrink-0 mt-1">{icon}</div>}
-        <div>
-          <h1 className="serif text-[38px] leading-[1.05] tracking-tight">{title}</h1>
-          <p className="text-muted mt-1.5 max-w-2xl text-[15px] leading-relaxed">{sub}</p>
-        </div>
+    <header className="flex items-end justify-between gap-8 mb-10 flex-wrap">
+      <div>
+        <h1 className="text-[30px] font-semibold tracking-[-0.025em] leading-[1.1]">{title}</h1>
+        <p className="text-muted mt-2 max-w-2xl text-[15px] leading-relaxed">{sub}</p>
       </div>
       {right}
     </header>

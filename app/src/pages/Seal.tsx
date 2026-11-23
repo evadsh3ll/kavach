@@ -148,7 +148,7 @@ export function Seal() {
               </select>
             </Field>
             <Field label="Payout rail (Ghost Pay)">
-              <div className="flex gap-1 card p-1 !rounded-xl">
+              <div className="flex gap-1 card p-1 !rounded-md">
                 {(['stealth', 'zcash'] as Rail[]).map((r) => (
                   <button key={r} onClick={() => setRail(r)} className={`flex-1 px-3 py-1.5 rounded-lg text-sm ${rail === r ? 'bg-text text-ink' : 'text-muted'}`}>
                     {r === 'stealth' ? 'One-time address' : 'Zcash shielded'}
@@ -246,7 +246,7 @@ export function Seal() {
 function Settled({ claim }: { claim: any }) {
   if (!claim?.pub) return null;
   return (
-    <div className="mt-4 rounded-xl border border-mint/40 bg-mint/5 p-4 fade-in">
+    <div className="mt-4 rounded-md border border-mint/40 bg-mint/5 p-4 fade-in">
       <div className="text-mint font-bold flex items-center gap-2"><ShieldCheck size={16} /> Settled · {formatINR(claim.pub.payoutAmount)}</div>
       <div className="text-xs text-muted mt-1"> paid to {claim.rail === 'zcash' ? 'the Ghost Pay bridge → Zcash shielded pool' : 'one-time address'} <Hex v={claim.pub.payoutRecipient} />
       </div>

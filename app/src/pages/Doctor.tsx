@@ -52,7 +52,7 @@ export function Provider() {
         {!data?.length && <Empty>No patient has shared anything with you yet. (Patient → My records → Share)</Empty>}
         <div className="space-y-3">
           {(data ?? []).map((r) => (
-            <div key={r.id} className="rounded-xl border border-line p-4">
+            <div key={r.id} className="rounded-md border border-line p-4">
               <div className="flex justify-between items-center flex-wrap gap-3">
                 <div>
                   <div className="font-semibold">

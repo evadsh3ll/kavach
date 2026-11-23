@@ -5,7 +5,7 @@ export function FhirView({ bundle }: { bundle: any }) {
   if (bundle?.card) {
     const e = bundle.card;
     return (
-      <div className="rounded-xl border border-rose/40 bg-rose/5 p-4 fade-in">
+      <div className="rounded-md border border-rose/40 bg-rose/5 p-4 fade-in">
         <div className="label text-rose">Emergency card</div>
         <div className="text-xl font-bold mt-1">{e.patientName}</div>
         <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
@@ -39,7 +39,7 @@ export function FhirView({ bundle }: { bundle: any }) {
   const org = res('Organization')[0];
   const claim = res('Claim')[0];
   return (
-    <div className="rounded-xl border border-line bg-panel2 p-4 text-sm fade-in">
+    <div className="rounded-md border border-line bg-panel2 p-4 text-sm fade-in">
       <div className="flex justify-between items-center">
         <div className="label">FHIR R4 Bundle · decrypted on this device</div>
         <button className="text-xs text-violet" onClick={() => setRaw(!raw)}>

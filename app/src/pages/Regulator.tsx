@@ -54,7 +54,7 @@ export function RegulatorPage() {
         sub="Publishes the Merkle root of licensed hospitals. The list is public; which one filed a claim is not. Revocation kills every older root instantly."
         right={
           <button className={`btn ${data?.paused ? 'btn-primary' : 'btn-danger'}`} onClick={() => act('pause', async () => (await c('regulator').regulator.setPaused(!data?.paused)).wait())}>
-            {busy === 'pause' ? <Spinner /> : data?.paused ? '▶ Resume settlements' : '⏸ Emergency pause'}
+            {busy === 'pause' ? <Spinner /> : data?.paused ? 'Resume settlements' : 'Emergency pause'}
           </button>
         }
       />

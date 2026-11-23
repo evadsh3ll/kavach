@@ -22,6 +22,12 @@ importers:
       '@fontsource-variable/newsreader':
         specifier: 5.1.0
         version: 5.1.0
+      '@fontsource/ibm-plex-mono':
+        specifier: 5.1.0
+        version: 5.1.0
+      '@fontsource/ibm-plex-sans':
+        specifier: 5.1.0
+        version: 5.1.0
       '@kavach/sdk':
         specifier: workspace:*
         version: link:../sdk
@@ -639,6 +645,12 @@ packages:
 
   '@fontsource-variable/newsreader@5.1.0':
     resolution: {integrity: sha512-2ISuLzafbdqtakul+f0EwS+u0phcnxFeEFVBCRPEVcbOOLMR2oq0MFUy1Gmi6n4F5LFso97ocyTOyGUQrUUVXg==}
+
+  '@fontsource/ibm-plex-mono@5.1.0':
+    resolution: {integrity: sha512-XKsZNyRCj6tz8zlatHmniSoLVephMD5GQG2sXgcaEb8DkUO+O61r28uTlIMEZuoZXtP4c4STvL+KUlJM5jZOEg==}
+
+  '@fontsource/ibm-plex-sans@5.1.0':
+    resolution: {integrity: sha512-v2aFHGh33ogG+At6dVNUCX6vWlNAhQ6STWj5WrBKPxVWX1SsAnHNq8sXQBa7WHEt29Irmozuk7GTp6GzFlpwdQ==}
 
   '@hono/node-server@1.19.19':
     resolution: {integrity: sha512-Fy9R7PACOzHU9LDpfnuzVyuVYevKQRcEG2mZhmfc+DRdmayEd3RVfa2XOt2IgGcPNgA77Yk63KBszepcMFK5Ng==}
@@ -2838,6 +2850,10 @@ snapshots:
   '@fontsource-variable/geist@5.1.0': {}
 
   '@fontsource-variable/newsreader@5.1.0': {}
+
+  '@fontsource/ibm-plex-mono@5.1.0': {}
+
+  '@fontsource/ibm-plex-sans@5.1.0': {}
 
   '@hono/node-server@1.19.19(hono@4.13.20)':
     dependencies:

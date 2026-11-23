@@ -75,7 +75,7 @@ export function DemoGuide({ go }: { go: (p: string) => void }) {
         return (
           <li key={g.id}>
             {header && <div className="label mt-3 mb-1.5 first:mt-0">{header}</div>}
-            <div className={`rounded-lg px-2.5 py-2 flex gap-2.5 items-start ${isNext ? 'bg-text/[.05] ring-1 ring-text/15' : ''}`}>
+            <div className={`rounded-md px-2 py-2 flex gap-2.5 items-start ${isNext ? 'bg-panel2' : ''}`}>
               <span
                 className={`mt-0.5 w-5 h-5 shrink-0 rounded-full grid place-items-center text-[10px] font-semibold border ${
                   done ? 'bg-mint/15 text-mint border-mint/30' : isNext ? 'bg-text text-ink border-text' : 'text-muted border-line'
@@ -99,7 +99,7 @@ export function DemoGuide({ go }: { go: (p: string) => void }) {
                       go(who.page);
                     }}
                   >
-                    Sign in as {who.name.split(' (')[0]} <ArrowRight size={12} />
+                    Sign in as {meta.label.toLowerCase()} <ArrowRight size={12} />
                   </button>
                 )}
               </div>

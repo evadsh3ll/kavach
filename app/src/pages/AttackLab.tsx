@@ -172,7 +172,7 @@ export function AttackLab() {
           <div className="flex items-center gap-3">
             {blocked > 0 && <Chip tone="rose">{blocked} attacks blocked</Chip>}
             <button className="btn btn-primary" onClick={runAll} disabled={all}>
-              {all ? <Spinner /> : '▶'} Run all
+              {all ? <Spinner /> : null} Run all
             </button>
           </div>
         }
@@ -183,11 +183,11 @@ export function AttackLab() {
           const done = r && r !== 'running';
           const ok = done && r.layer === 'ok';
           return (
-            <Card key={s.id} className={done ? (ok ? '!border-mint/50' : '!border-rose/50') : ''}>
+            <Card key={s.id}>
               <div className="flex justify-between gap-3">
                 <div>
                   <div className="font-semibold">
-                    {(() => { const I = ICON[s.id]; return I ? <I size={15} strokeWidth={1.7} className="inline -mt-0.5 mr-1.5" /> : null; })()}{s.title}
+                    {s.title}
                   </div>
                   <div className="text-sm text-muted mt-1">{s.how}</div>
                 </div>
@@ -196,10 +196,10 @@ export function AttackLab() {
                 </button>
               </div>
               {done && (
-                <div className={`mt-3 rounded-lg p-3 text-sm fade-in ${ok ? 'bg-mint/10' : 'bg-rose/10'}`}>
+                <div className="mt-3 text-sm fade-in">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Chip tone={ok ? 'mint' : 'rose'}>{ok ? 'SETTLED' : 'BLOCKED'}</Chip>
-                    {!ok && <Chip tone="gray">{r.layer === 'circuit' ? ' by the ZK circuit — no proof can exist' : ' by the smart contract'}</Chip>}
+                    {!ok && <span className="text-[12.5px] text-muted">{r.layer === 'circuit' ? 'by the ZK circuit: no proof can exist' : 'by the smart contract'}</span>}
                     {r.ms > 0 && <span className="text-xs text-muted mono">{(r.ms / 1000).toFixed(1)}s</span>}
                   </div>
                   <div className={`mt-2 mono text-[12.5px] ${ok ? 'text-mint' : 'text-rose'}`}>{r.reason}</div>

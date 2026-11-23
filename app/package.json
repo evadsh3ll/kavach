@@ -12,6 +12,8 @@
     "@fontsource-variable/geist": "5.1.0",
     "@fontsource-variable/geist-mono": "5.1.0",
     "@fontsource-variable/newsreader": "5.1.0",
+    "@fontsource/ibm-plex-mono": "5.1.0",
+    "@fontsource/ibm-plex-sans": "5.1.0",
     "@kavach/sdk": "workspace:*",
     "@noir-lang/noir_js": "1.0.0",
     "ethers": "^6.13.0",

@@ -1,39 +1,32 @@
 @import 'tailwindcss';
 
-/* Mohar design system — "medical record meets declassified file".
-   Light paper for trust & projector legibility; ink redaction bars; one semantic colour per idea:
-   violet = private, teal = public/on-chain, green = verified, vermilion = blocked.
-   Attack Lab & X-Ray switch to the dark "lab" scheme via .lab. */
+/* Mohar design system — "clinical record".
+   Reads like a well-made bank statement or hospital form: one typeface, neutral paper, near-black ink,
+   hairline rules instead of boxes. Colour carries meaning only:
+     green  = valid / paid        red = blocked / rejected        ochre = waiting
+   Private vs public is shown with ink (redaction, solid) vs outline — not with extra hues.
+   The legacy token names (violet, sky, mint, rose, amber) are kept so components don't churn;
+   they are remapped to that restrained palette here. */
 @theme {
-  --color-ink: #f5f2ea; /* page (paper) */
-  --color-panel: #fffdf8; /* surfaces */
-  --color-panel2: #f0ece2; /* inset */
-  --color-line: #ddd8cc; /* hairline */
-  --color-text: #16181d;
-  --color-muted: #5b5e66;
-  --color-violet: #5b3fd6; /* private */
-  --color-sky: #0f7c86; /* public / on-chain */
-  --color-mint: #1f8a4c; /* verified */
-  --color-rose: #d8432b; /* blocked */
-  --color-amber: #b7791f; /* waiting */
+  --color-ink: #f6f6f4; /* page */
+  --color-panel: #fcfcfb; /* surfaces */
+  --color-panel2: #efefec; /* inset / hover */
+  --color-line: #e2e2de; /* hairline */
+  --color-text: #141517; /* ink */
+  --color-muted: #6b6d72; /* secondary */
+  --color-violet: #141517; /* "private" → ink */
+  --color-sky: #3f4a55; /* "public / data" → slate */
+  --color-mint: #12704f; /* valid / paid */
+  --color-rose: #b8322a; /* blocked */
+  --color-amber: #8a6418; /* waiting */
   --color-onaccent: #ffffff;
-  --font-sans: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Newsreader Variable', 'Newsreader', Georgia, serif;
-  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
+/* Attack Lab / X-Ray used to switch to a dark theme; one theme everywhere now. */
 .lab {
-  --color-ink: #101216;
-  --color-panel: #171a20;
-  --color-panel2: #1e222a;
-  --color-line: #2b303a;
-  --color-text: #e9e6dd;
-  --color-muted: #9a9ea8;
-  --color-violet: #8f7cff;
-  --color-sky: #3cc3cc;
-  --color-mint: #43c27d;
-  --color-rose: #ff6a4f;
-  --color-amber: #f0b44c;
   background: var(--color-ink);
   color: var(--color-text);
 }
@@ -43,54 +36,68 @@ body {
   background: var(--color-ink);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-feature-settings: 'ss01', 'tnum';
+  font-size: 15px;
+  font-feature-settings: 'tnum';
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-body {
-  background-image: radial-gradient(rgba(22, 24, 29, 0.045) 1px, transparent 1px);
-  background-size: 22px 22px;
-  min-height: 100vh;
+::selection {
+  background: #141517;
+  color: #fcfcfb;
 }
+
+/* Former display serif → the same sans, set tight. Headings are weight + size, not a second family. */
 .serif {
-  font-family: var(--font-serif);
-  font-optical-sizing: auto;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.022em;
 }
 .mono {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+kbd {
+  font-family: var(--font-mono);
 }
 .text-fg {
   color: var(--color-text);
 }
+
+/* Surfaces: a hairline, small radius, no drop shadow. */
 .card {
   background: var(--color-panel);
   border: 1px solid var(--color-line);
-  border-radius: 14px;
-  box-shadow: 0 1px 0 rgba(22, 24, 29, 0.03);
+  border-radius: 6px;
 }
+
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  border-radius: 10px;
-  padding: 9px 16px;
-  font-weight: 600;
+  gap: 7px;
+  border-radius: 5px;
+  padding: 7px 13px;
+  font-weight: 500;
   font-size: 14px;
-  transition: all 0.15s;
+  line-height: 20px;
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
   cursor: pointer;
   white-space: nowrap;
 }
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 .btn-primary {
   background: var(--color-text);
-  color: var(--color-ink);
+  color: var(--color-panel);
+  border: 1px solid var(--color-text);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-sky);
-  color: #fff;
+  background: #2a2c30;
 }
 .btn-ghost {
   border: 1px solid var(--color-line);
@@ -98,61 +105,75 @@ body {
   background: var(--color-panel);
 }
 .btn-ghost:hover:not(:disabled) {
-  border-color: var(--color-text);
+  border-color: #b9b9b4;
+  background: #ffffff;
 }
 .btn-danger {
-  background: color-mix(in srgb, var(--color-rose) 10%, transparent);
+  background: transparent;
   color: var(--color-rose);
-  border: 1px solid color-mix(in srgb, var(--color-rose) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-rose) 40%, transparent);
 }
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-rose) 6%, transparent);
+}
+
 .input {
   background: var(--color-panel);
   border: 1px solid var(--color-line);
-  border-radius: 10px;
-  padding: 8px 12px;
+  border-radius: 5px;
+  padding: 7px 10px;
   font-size: 14px;
   width: 100%;
   color: var(--color-text);
+  transition: border-color 0.12s ease-out;
+}
+.input:hover {
+  border-color: #c9c9c4;
 }
 .input:focus {
-  outline: 2px solid color-mix(in srgb, var(--color-sky) 45%, transparent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--color-text);
 }
+
+/* Small secondary label — sentence case, no letter-spaced caps. */
 .label {
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  font-weight: 600;
+  font-weight: 400;
 }
+
+/* Status tag: square-ish, quiet. Colour comes from the utility classes it is paired with. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 2px 9px;
-  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 7px;
+  border-radius: 4px;
   white-space: nowrap;
+  line-height: 18px;
 }
+
 .redact {
   background: var(--color-text);
   color: transparent !important;
-  border-radius: 3px;
+  border-radius: 2px;
   user-select: none;
 }
 .boundary {
-  border: 1.5px dashed var(--color-line);
-  border-radius: 18px;
+  border: 1px dashed #cfcfca;
+  border-radius: 8px;
 }
 .perforated {
-  border-top: 1.5px dashed var(--color-line);
+  border-top: 1px solid var(--color-line);
 }
 
+/* Motion: short ease-out, no overshoot, no looping attention-grabbers. */
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -160,7 +181,7 @@ body {
   }
 }
 .fade-in {
-  animation: fade-in 0.35s ease-out both;
+  animation: fade-in 0.22s ease-out both;
 }
 @keyframes sweep {
   from {
@@ -171,7 +192,7 @@ body {
   }
 }
 .sweep {
-  animation: sweep 0.45s cubic-bezier(0.6, 0, 0.2, 1) both;
+  animation: sweep 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 @keyframes shake {
   0%,
@@ -179,30 +200,27 @@ body {
     transform: none;
   }
   25% {
-    transform: translateX(-4px);
+    transform: translateX(-3px);
   }
   75% {
-    transform: translateX(4px);
+    transform: translateX(3px);
   }
 }
 .shake {
-  animation: shake 0.3s ease-in-out 2;
+  animation: shake 0.25s ease-out 2;
 }
 @keyframes stamp {
-  0% {
-    transform: scale(1.8) rotate(-8deg);
+  from {
+    transform: scale(1.25) rotate(-6deg);
     opacity: 0;
   }
-  60% {
-    transform: scale(0.95) rotate(-8deg);
+  to {
+    transform: scale(1) rotate(-6deg);
     opacity: 1;
-  }
-  100% {
-    transform: scale(1) rotate(-8deg);
   }
 }
 .stamp {
-  animation: stamp 0.35s cubic-bezier(0.3, 1.4, 0.6, 1) both;
+  animation: stamp 0.28s ease-out both;
 }
 @keyframes packet {
   from {
@@ -220,17 +238,8 @@ body {
     opacity: 0;
   }
 }
-@keyframes pulse-ring {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-sky) 45%, transparent);
-  }
-  50% {
-    box-shadow: 0 0 0 7px transparent;
-  }
-}
+/* The "current step" marker no longer pulses. */
 .pulse {
-  animation: pulse-ring 1.6s infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -273,27 +273,27 @@ export function Story({ go }: { go: (p: string) => void }) {
       {/* status strip */}
       <div className="flex items-center justify-between px-6 h-11 border-b border-line bg-panel/70 text-[13px]">
         <div className="flex items-center gap-3 text-muted">
-          <span className="mono">Asha Verma · chemotherapy claim · {formatINR(payout)}</span>
+          <span>Asha Verma · chemotherapy claim · {formatINR(payout)}</span>
           <span className="w-1 h-1 rounded-full bg-line" />
           <span>
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button className={`chip ${xray ? 'bg-text text-ink' : 'bg-text/5 text-muted'} !py-1 cursor-pointer`} onClick={() => setXray(!xray)}>
-            <Eye size={12} /> X-ray {xray ? 'on' : 'off'} <kbd className="mono opacity-60">X</kbd>
+        <div className="flex items-center gap-5">
+          <button className={`text-[12.5px] ${xray ? 'text-text font-medium' : 'text-muted'} hover:text-text inline-flex items-center gap-1.5`} onClick={() => setXray(!xray)}>
+            X-ray {xray ? 'on' : 'off'} <kbd className="mono opacity-60">X</kbd>
           </button>
-          <button className="chip bg-text/5 text-muted !py-1 cursor-pointer" onClick={() => setView(view === 'scene' ? 'devices' : 'scene')}>
-            {view === 'scene' ? <MonitorSmartphone size={12} /> : <Sparkles size={12} />} {view === 'scene' ? 'Device view' : 'Scene view'} <kbd className="mono opacity-60">V</kbd>
+          <button className="text-[12.5px] text-muted hover:text-text inline-flex items-center gap-1.5" onClick={() => setView(view === 'scene' ? 'devices' : 'scene')}>
+            {view === 'scene' ? 'Device view' : 'Scene view'} <kbd className="mono opacity-60">V</kbd>
           </button>
-          <button className={`chip ${details ? 'bg-text text-ink' : 'bg-text/5 text-muted'} !py-1 cursor-pointer`} onClick={() => setDetails(!details)}>
-            <Cpu size={12} /> Under the hood <kbd className="mono opacity-60">H</kbd>
+          <button className={`text-[12.5px] ${details ? 'text-text font-medium' : 'text-muted'} hover:text-text inline-flex items-center gap-1.5`} onClick={() => setDetails(!details)}>
+            Under the hood <kbd className="mono opacity-60">H</kbd>
           </button>
-          <button className="chip bg-text/5 text-muted !py-1 cursor-pointer" onClick={restart}>
-            <RotateCcw size={12} /> Restart <kbd className="mono opacity-60">R</kbd>
+          <button className="text-[12.5px] text-muted hover:text-text inline-flex items-center gap-1.5" onClick={restart}>
+            Restart <kbd className="mono opacity-60">R</kbd>
           </button>
-          <button className="chip bg-text/5 text-muted !py-1 cursor-pointer" onClick={() => setHelp(!help)}>
-            <Keyboard size={12} /> Keys <kbd className="mono opacity-60">?</kbd>
+          <button className="text-[12.5px] text-muted hover:text-text inline-flex items-center gap-1.5" onClick={() => setHelp(!help)}>
+            Keys <kbd className="mono opacity-60">?</kbd>
           </button>
         </div>
       </div>
@@ -365,7 +365,7 @@ export function Story({ go }: { go: (p: string) => void }) {
         </ol>
         <div className={`grid gap-6 ${details ? 'grid-cols-[1.05fr_1fr_1.15fr]' : 'grid-cols-1'}`}>
           <div className="flex flex-col justify-between gap-3 min-w-0">
-            <p className={`serif leading-snug ${details ? 'text-[19px]' : 'text-[22px]'}`}>{cur.say}</p>
+            <p className={`leading-snug tracking-[-0.01em] ${details ? 'text-[18px]' : 'text-[20px]'}`}>{cur.say}</p>
             <div className="flex items-center justify-between gap-3">
               <div className="text-[12px] text-muted min-w-0">
                 <span className="label mr-2">on-chain</span>
@@ -494,8 +494,8 @@ function PhoneFrame(c: Ctx) {
           <span className="text-[11px] text-muted">Asha Verma</span>
         </div>
         <div className="flex-1 min-h-0 overflow-auto px-3 pb-3 space-y-2.5 text-[12.5px]">
-          <div className="rounded-xl bg-text text-ink p-3">
-            <div className="text-[10px] uppercase tracking-wider opacity-70">{c.policy.insurerName}</div>
+          <div className="rounded-md bg-text text-ink p-3">
+            <div className="text-[10px] opacity-70">{c.policy.insurerName}</div>
             <div className="serif text-[18px] leading-tight mt-0.5">{c.policy.planName}</div>
             <div className="flex justify-between mt-2 mono text-[12px]">
               <span>{formatINR(c.policy.sumInsured)}</span>
@@ -504,7 +504,7 @@ function PhoneFrame(c: Ctx) {
           </div>
 
           {/* identity */}
-          <div className={`rounded-xl border p-3 ${c.step === 1 ? 'border-text' : 'border-line'}`}>
+          <div className={`rounded-md border p-3 ${c.step === 1 ? 'border-text' : 'border-line'}`}>
             <div className="flex items-center gap-2 font-semibold">
               <IdCard size={14} /> Anon Aadhaar
               {id ? <span className="ml-auto chip bg-mint/12 text-mint">verified</span> : <span className="ml-auto chip bg-text/5 text-muted">not verified</span>}
@@ -529,7 +529,7 @@ function PhoneFrame(c: Ctx) {
 
           {/* consent sheet */}
           {open && (
-            <div className={`rounded-xl border p-3 fade-in ${c.step === 3 ? 'border-text' : 'border-line'}`}>
+            <div className={`rounded-md border p-3 fade-in ${c.step === 3 ? 'border-text' : 'border-line'}`}>
               <div className="text-[11px] text-muted">{open.payload.hospital} requests consent</div>
               <div className="font-semibold mt-0.5">{open.payload.procedure.display}</div>
               <div className="mt-1 text-[11.5px]">
@@ -547,7 +547,7 @@ function PhoneFrame(c: Ctx) {
             </div>
           )}
           {c.done.settle && (
-            <div className="rounded-xl border border-line p-3 fade-in flex items-center gap-2">
+            <div className="rounded-md border border-line p-3 fade-in flex items-center gap-2">
               <BadgeCheck size={14} className="text-mint" /> Claim settled. Nothing to pay at discharge.
             </div>
           )}
