@@ -23,10 +23,10 @@ export interface SceneProps {
 const W = 1280;
 const H = 520;
 const INK = '#16181d';
-const VIOLET = '#5b3fd6';
-const TEAL = '#0f7c86';
-const GREEN = '#1f8a4c';
-const RED = '#d8432b';
+const VIOLET = '#141517'; // private = ink
+const TEAL = '#4b5560'; // public = slate
+const GREEN = '#12704f';
+const RED = '#b8322a';
 const GOLD = '#c9a227';
 const ease = [0.65, 0, 0.35, 1] as const;
 
@@ -110,10 +110,10 @@ export function Seal({ amount, size = 112, label = 'VALID' }: { amount: string; 
       <path d={scallop(60, 60, 52)} fill={INK} />
       <circle cx="60" cy="60" r="43" fill="none" stroke={GOLD} strokeWidth="2" />
       <circle cx="60" cy="60" r="38" fill="none" stroke={GOLD} strokeWidth="0.8" strokeDasharray="2 3" />
-      <text x="60" y="47" textAnchor="middle" fontSize="9" letterSpacing="2.5" fill={GOLD} fontFamily="Geist Variable, sans-serif" fontWeight="700">
+      <text x="60" y="47" textAnchor="middle" fontSize="9" letterSpacing="2.5" fill={GOLD} fontFamily="IBM Plex Sans, sans-serif" fontWeight="700">
         {label}
       </text>
-      <text x="60" y="68" textAnchor="middle" fontSize="17" fill="#fff" fontFamily="Newsreader Variable, serif" fontWeight="600">
+      <text x="60" y="68" textAnchor="middle" fontSize="17" fill="#fff" fontFamily="IBM Plex Sans, sans-serif" fontWeight="600">
         {amount}
       </text>
       <path d="M50 79 l7 7 l14 -14" fill="none" stroke="#43c27d" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
@@ -139,10 +139,10 @@ function MedFile({ locked, w = 132, rows }: { locked?: boolean; w?: number; rows
     <motion.div
       className="rounded-lg border bg-white shadow-[0_10px_24px_-12px_rgba(22,24,29,.4)] p-2.5 relative overflow-hidden"
       style={{ width: w, borderColor: locked ? VIOLET : '#ddd8cc' }}
-      animate={{ backgroundColor: locked ? '#efeafe' : '#ffffff' }}
+      animate={{ backgroundColor: locked ? '#e8e8e4' : '#ffffff' }}
       transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: locked ? VIOLET : '#5b5e66' }}>
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold" style={{ color: locked ? VIOLET : '#5b5e66' }}>
         <FileText size={11} /> Medical file
       </div>
       <div className="mt-1.5 space-y-1">
@@ -161,7 +161,7 @@ function MedFile({ locked, w = 132, rows }: { locked?: boolean; w?: number; rows
             className="absolute inset-0 grid place-items-center"
             initial={{ scale: 2.2, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+            transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
           >
             <div className="w-10 h-10 rounded-full grid place-items-center text-white shadow-lg" style={{ background: VIOLET }}>
               <Lock size={19} />
@@ -198,13 +198,13 @@ function Zone({ x, w, title, tone, sub }: { x: number; w: number; title: string;
         top: 34,
         width: w,
         height: H - 44,
-        border: `1.5px dashed ${c}55`,
-        background: tone === 'public' ? `repeating-linear-gradient(135deg, ${TEAL}08 0 10px, transparent 10px 20px)` : `${VIOLET}05`,
+        border: tone === 'public' ? '1px solid #d6d6d1' : '1px dashed #c9c9c4',
+        background: tone === 'public' ? '#fcfcfb' : '#efefec',
       }}
     >
       <div className="absolute -top-[26px] left-2 flex items-center gap-2 text-[12.5px]">
         <span className="font-semibold text-[#16181d]">{title}</span>
-        <span className="chip !py-0.5" style={{ background: c + '18', color: c }}>
+        <span className="chip !py-0.5" style={{ background: '#14151710', color: c }}>
           {tone === 'private' ? <Lock size={10} /> : <Globe size={10} />} {sub}
         </span>
       </div>
@@ -276,7 +276,7 @@ function World(p: SceneProps) {
           </div>
           <div className="px-2.5 pt-1 space-y-2">
             <div className="flex items-center gap-2">
-              <Person coat={VIOLET} scarf="#b7a6ff" size={30} />
+              <Person coat="#4b5560" scarf="#c9a227" size={30} />
               <div className="leading-tight">
                 <div className="text-[12px] font-semibold">Asha Verma</div>
                 <div className="text-[9.5px] text-[#5b5e66]">her vault</div>
@@ -290,7 +290,7 @@ function World(p: SceneProps) {
       {/* ============ HOSPITAL ============ */}
       <At x={248} y={430}>
         <div className="flex items-end gap-2">
-          <Person coat={TEAL} size={46} />
+          <Person coat="#6f6a60" size={46} />
           <div className="text-[11.5px] text-[#5b5e66] pb-1 leading-tight">
             Billing desk
             <br />
@@ -306,7 +306,7 @@ function World(p: SceneProps) {
         style={{ left: CONTRACT.x, top: CONTRACT.y, width: CONTRACT.w, height: CONTRACT.h, borderColor: here('settle') ? TEAL : undefined }}
         animate={{ boxShadow: running('settle') ? `0 0 0 6px ${TEAL}22` : '0 0 0 0px transparent' }}
       >
-        <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: TEAL }}>
+        <div className="text-[11px] font-semibold" style={{ color: TEAL }}>
           Insurance contract
         </div>
         <div className="text-[11px] text-[#5b5e66] leading-tight w-[150px]">checks every seal, then pays — no human in the loop</div>
@@ -339,7 +339,7 @@ function World(p: SceneProps) {
 
       {/* ledger */}
       <div className="absolute" style={{ left: LEDGER.x, top: LEDGER.y, width: LEDGER.w }}>
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: TEAL }}>
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold mb-1.5" style={{ color: TEAL }}>
           <Globe size={11} /> Public ledger
         </div>
         <div className="space-y-1.5">
@@ -365,7 +365,7 @@ function World(p: SceneProps) {
 
       {/* storage */}
       <div className="absolute card p-2.5" style={{ left: STORE.x, top: STORE.y, width: STORE.w, height: STORE.h }}>
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider" style={{ color: TEAL }}>
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color: TEAL }}>
           <CloudUpload size={12} /> File storage
         </div>
         <div className="text-[10.5px] text-[#5b5e66] leading-tight">anyone can download · nobody can read</div>
@@ -532,7 +532,7 @@ function PhoneScreen(p: SceneProps & { amt: string; reached: (id: string) => boo
   const st = p.step;
   const card = (
     <div className="rounded-xl p-2.5 text-white" style={{ background: INK }}>
-      <div className="text-[8.5px] uppercase tracking-wider opacity-70">Suraksha Health</div>
+      <div className="text-[8.5px] opacity-70">Suraksha Health</div>
       <div className="serif text-[15px] leading-tight">{p.policy.planName}</div>
       <div className="flex justify-between mt-1 mono text-[10.5px]">
         <span>{formatINR(p.policy.sumInsured)}</span>
@@ -552,7 +552,7 @@ function PhoneScreen(p: SceneProps & { amt: string; reached: (id: string) => boo
     return (
       <div className="space-y-2">
         <div className="rounded-xl border border-[#ddd8cc] bg-white p-2 text-[10.5px]">
-          <div className="text-[9px] font-semibold uppercase tracking-wider text-[#8a8d95]">Aadhaar</div>
+          <div className="text-[9px] font-semibold text-[#8a8d95]">Aadhaar</div>
           {[
             ['Name', 'Asha Verma'],
             ['Number', '4821 7730 1166'],
@@ -706,7 +706,7 @@ function HospitalStage(p: SceneProps & { amt: string; fileRows: [string, string]
             <rect x="20" y="20" width="14" height="182" rx="3" fill="#2b303a" />
             <rect x="116" y="20" width="14" height="182" rx="3" fill="#2b303a" />
             <rect x="14" y="10" width="122" height="20" rx="5" fill={INK} />
-            <rect x="35" y="150" width="80" height="50" rx="6" fill="#efeafe" stroke={VIOLET} strokeDasharray="3 3" />
+            <rect x="35" y="150" width="80" height="50" rx="6" fill="#e8e8e4" stroke={VIOLET} strokeDasharray="3 3" />
           </svg>
           <motion.div
             className="absolute left-[40px] w-[70px]"
@@ -727,7 +727,7 @@ function HospitalStage(p: SceneProps & { amt: string; fileRows: [string, string]
       {/* 7 rules — light up while proving */}
       {at('prove') && (
         <div className="absolute" style={{ left: 248, top: 96, width: 196 }}>
-          <div className="text-[11px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: VIOLET }}>
+          <div className="text-[11px] font-semibold mb-1.5" style={{ color: VIOLET }}>
             The seal proves
           </div>
           <div className="space-y-1">
@@ -749,7 +749,7 @@ function HospitalStage(p: SceneProps & { amt: string; fileRows: [string, string]
       {/* the seal pops out */}
       <AnimatePresence>
         {sealed && st === 'prove' && (
-          <motion.div className="absolute z-20" style={{ left: PRESS.x + 26, top: PRESS.y + 250 }} initial={{ y: -90, scale: 0.3, opacity: 0, rotate: -20 }} animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 200, damping: 14, delay: 0.5 }}>
+          <motion.div className="absolute z-20" style={{ left: PRESS.x + 26, top: PRESS.y + 250 }} initial={{ y: -90, scale: 0.3, opacity: 0, rotate: -20 }} animate={{ y: 0, scale: 1, opacity: 1, rotate: 0 }} transition={{ duration: 0.35, ease: [0.2, 0, 0, 1], delay: 0.5 }}>
             <Seal amount={p.amt} />
           </motion.div>
         )}
@@ -782,9 +782,9 @@ function InsurerLens({ amt }: { amt: string }) {
         style={{ left: 640, top: 40, width: 470 }}
         initial={{ scale: 0.6, x: 300, y: 120, opacity: 0 }}
         animate={{ scale: 1, x: 0, y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 160, damping: 18 }}
+        transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
       >
-        <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider" style={{ color: TEAL }}>
+        <div className="flex items-center gap-2 text-[12px] font-semibold" style={{ color: TEAL }}>
           <Eye size={14} /> What the insurer can see
         </div>
         <div className="flex items-baseline justify-between mt-2">
@@ -850,7 +850,7 @@ function LeakSweep({ phase, rows, total }: { phase: Phase; rows: ScanRow[]; tota
         </div>
       </motion.div>
       <motion.div className="absolute z-40 card p-4 shadow-2xl" style={{ left: 150, top: 60, width: 340 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider" style={{ color: TEAL }}>
+        <div className="flex items-center gap-2 text-[12px] font-semibold" style={{ color: TEAL }}>
           <ScanSearch size={14} /> Searching the whole public chain →
         </div>
         <div className="mt-2 space-y-1">
@@ -871,7 +871,7 @@ function LeakSweep({ phase, rows, total }: { phase: Phase; rows: ScanRow[]; tota
           })}
         </div>
         {clean && (
-          <motion.div initial={{ scale: 1.6, opacity: 0, rotate: -8 }} animate={{ scale: 1, opacity: 1, rotate: -4 }} transition={{ type: 'spring', stiffness: 260, damping: 16 }} className="mt-3 rounded-lg border-2 text-center py-2" style={{ borderColor: GREEN, color: GREEN }}>
+          <motion.div initial={{ scale: 1.6, opacity: 0, rotate: -8 }} animate={{ scale: 1, opacity: 1, rotate: -4 }} transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }} className="mt-3 rounded-lg border-2 text-center py-2" style={{ borderColor: GREEN, color: GREEN }}>
             <div className="font-bold tracking-wider text-[15px]">0 PRIVATE DETAILS FOUND</div>
             <div className="text-[11px]">{total ? `every one of ${total} transactions checked` : 'every transaction checked'}</div>
           </motion.div>
@@ -904,7 +904,7 @@ function Fraud({ amt, nul }: { amt: string; nul?: string }) {
       {/* the contract */}
       <At x={600} y={140}>
         <div className="card p-4 w-[230px] h-[200px]" style={{ borderColor: TEAL }}>
-          <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: TEAL }}>
+          <div className="text-[11px] font-semibold" style={{ color: TEAL }}>
             Insurance contract
           </div>
           <div className="text-[11.5px] text-[#5b5e66] mt-1 leading-snug">Every seal carries a one-time claim number. This one is already spent.</div>
@@ -979,7 +979,7 @@ function Today() {
       {/* hospital with an open file */}
       <At x={40} y={110}>
         <div className="flex flex-col items-center gap-2">
-          <Person coat={TEAL} size={56} />
+          <Person coat="#6f6a60" size={56} />
           <MedFile
             rows={[
               ['Patient', 'Asha Verma'],
@@ -1004,7 +1004,7 @@ function Today() {
             </div>
           </Fly>
           <motion.div className="absolute flex items-center gap-3" style={{ left: 600, top: r.y }} initial={{ opacity: 0.25 }} animate={{ opacity: n > i ? 1 : 0.25 }}>
-            <Person coat={['#3a3f4b', '#6b5b45', '#2f6fb7', '#5b5e66'][i]} size={44} />
+            <Person coat={['#3a3f4b', '#7a6a55', '#5e6b76', '#8a8d92'][i]} size={44} />
             <div className="text-[12.5px] leading-tight w-[200px]">
               <b>{r.who}</b>
               <div className="text-[#5b5e66] flex items-center gap-1">

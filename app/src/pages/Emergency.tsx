@@ -10,6 +10,7 @@ import { c, getDemo, nameOf, revertReason, Role, short } from '../lib/chain';
 import { ipfsGet } from '../lib/zk';
 import { useIdentity } from '../lib/session';
 import { trace } from '../lib/trace';
+import { encPriv } from '../lib/wallet';
 
 const dec = (b: string) => JSON.parse(new TextDecoder().decode(getBytes(b)));
 
@@ -71,7 +72,7 @@ export function Responder() {
     const shares: { x: number; y: string }[] = [];
     for (const g of req.approvers) {
       const s = dec(await c().breakGlass.responderShares(req.id, g));
-      shares.push({ x: s.x, y: hexlify(await unwrapKey(s.w, responder.privateKey)) });
+      shares.push({ x: s.x, y: hexlify(await unwrapKey(s.w, await encPriv('responder'))) });
     }
     trace({ kind: 'crypto', title: `Unwrapped ${shares.length} key share${shares.length === 1 ? '' : 's'}`, detail: shares.length < 2 ? '1 Shamir share reveals nothing about the key' : 'Shamir 2-of-3 → reconstructing the AES key', vis: 'private' });
     if (shares.length < 2) {
@@ -137,7 +138,7 @@ export function Responder() {
         {mine.length === 0 && <Empty>No requests yet.</Empty>}
         <div className="space-y-3">
           {mine.map((r) => (
-            <div key={r.id} className="rounded-xl border border-line p-4">
+            <div key={r.id} className="rounded-md border border-line p-4">
               <div className="flex justify-between items-center gap-2 flex-wrap">
                 <div className="text-sm">
                   Request #{r.id} · <b>{nameOf(r.patient)}</b> · “{r.reason}”
@@ -189,7 +190,7 @@ export function GuardianPage() {
       const idx = setup.guardians.findIndex((x: string) => x.toLowerCase() === me.toLowerCase());
       if (idx < 0) throw new Error('You are not a guardian for this patient.');
       const mine = dec(setup.wrappedShares[idx]);
-      const share = await unwrapKey(mine.w, d.accounts[g].privateKey); // only this guardian can do this
+      const share = await unwrapKey(mine.w, await encPriv(g)); // only this guardian can do this
       trace({ kind: 'crypto', title: 'Unwrapped my key share', detail: 'share stored on-chain encrypted to this guardian only', vis: 'private' });
       const forResponder = await wrapKey(share, hexlify(req.responderPubKey));
       trace({ kind: 'crypto', title: 'Re-wrapped share to the responder', detail: `ECIES to ${nameOf(req.responder)}’s key`, vis: 'sealed' });
@@ -212,7 +213,7 @@ export function GuardianPage() {
           {reqs.map((r) => {
             const did = r.approvers.map((a: string) => a.toLowerCase()).includes(me.toLowerCase());
             return (
-              <div key={r.id} className="rounded-xl border border-line p-4 flex justify-between items-center gap-3 flex-wrap">
+              <div key={r.id} className="rounded-md border border-line p-4 flex justify-between items-center gap-3 flex-wrap">
                 <div className="text-sm">
                   <b>{nameOf(r.responder)}</b> wants {nameOf(r.patient)}’s emergency card
                   <div className="text-muted text-xs mt-0.5">

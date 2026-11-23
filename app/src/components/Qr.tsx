@@ -31,7 +31,7 @@ export function QrImage({ value, size = 168, label, download }: { value: string;
       </div>
       {big && (
         <div className="fixed inset-0 z-[60] bg-text/80 grid place-items-center p-6" onClick={() => setBig(false)}>
-          <div className="bg-white rounded-2xl p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg p-6 text-center" onClick={(e) => e.stopPropagation()}>
             <img src={src} className="w-[min(70vh,80vw)] h-[min(70vh,80vw)]" alt="" />
             {label && <div className="mt-3 text-[15px] font-semibold text-[#16181d]">{label}</div>}
             <button className="btn btn-ghost mt-3" onClick={() => setBig(false)}>
@@ -141,9 +141,9 @@ export function QrScanner({
             <X size={18} />
           </button>
         </div>
-        <div className="relative rounded-xl overflow-hidden bg-[#0d0f13] aspect-[4/3] grid place-items-center">
+        <div className="relative rounded-md overflow-hidden bg-[#0d0f13] aspect-[4/3] grid place-items-center">
           <video ref={video} className={`absolute inset-0 w-full h-full object-cover ${cam ? '' : 'hidden'}`} muted playsInline />
-          {cam && <div className="absolute inset-[18%] border-2 border-white/80 rounded-xl shadow-[0_0_0_999px_rgba(0,0,0,.35)]" />}
+          {cam && <div className="absolute inset-[18%] border-2 border-white/80 rounded-md shadow-[0_0_0_999px_rgba(0,0,0,.35)]" />}
           {!cam && (
             <div className="text-center text-white/70 text-sm px-6">
               <Camera className="mx-auto mb-2 opacity-70" />

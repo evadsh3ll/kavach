@@ -1,7 +1,7 @@
 // Shared chain helpers for scripts + server: ABIs from Foundry artifacts, deployment, demo accounts.
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { Contract, JsonRpcProvider, Wallet, NonceManager } from 'ethers';
+import { Contract, FetchRequest, JsonRpcProvider, Wallet, NonceManager } from 'ethers';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 export const ROOT = root;
@@ -51,7 +51,9 @@ export const ROLES = {
 } as const;
 
 export function provider(rpc = process.env.RPC_URL ?? 'http://127.0.0.1:8545') {
-  return new JsonRpcProvider(rpc, undefined, { cacheTimeout: -1, pollingInterval: 500 });
+  const req = new FetchRequest(rpc);
+  req.timeout = 15_000; // a stalled public-RPC call must fail fast, not hang the relayer / indexer for 5 minutes
+  return new JsonRpcProvider(req, undefined, { cacheTimeout: -1, pollingInterval: 500 });
 }
 
 export function signer(role: keyof typeof ROLES, p = provider()) {

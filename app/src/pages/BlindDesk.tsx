@@ -5,6 +5,8 @@ import { Card, Check, Chip, Empty, Hex, Spinner, Stat, useAsync } from '../compo
 import { c, events, getDemo, getProvider, blockTime } from '../lib/chain';
 import { ring } from '../lib/keyring';
 
+const META = new Map<string, { at: number; gas: number; from: string }>();
+
 export function BlindDesk() {
   const d = getDemo();
   const me = d.accounts.insurer.address;
@@ -23,11 +25,16 @@ export function BlindDesk() {
         events('claims', 'ClaimSettled', null, null, me),
         events('claims', 'PolicyIssued', null, me),
       ]);
+      // a settled claim never changes: fetch its block + receipt once (fewer RPC calls, survives flaky networks)
       const rows = await Promise.all(
         ev.reverse().map(async (e) => {
-          const b = await getProvider().getBlock(e.blockNumber);
-          const rc = await getProvider().getTransactionReceipt(e.transactionHash);
-          return { e, at: b!.timestamp, gas: Number(rc!.gasUsed), from: rc!.from };
+          if (!META.has(e.transactionHash)) {
+            // public RPCs are load-balanced: a lagging node may not have a just-mined block yet → show the row anyway
+            const [b, rc] = await Promise.all([getProvider().getBlock(e.blockNumber).catch(() => null), getProvider().getTransactionReceipt(e.transactionHash).catch(() => null)]);
+            if (b && rc) META.set(e.transactionHash, { at: b.timestamp, gas: Number(rc.gasUsed), from: rc.from });
+            else return { e, at: Math.floor(Date.now() / 1000), gas: 0, from: '' };
+          }
+          return { e, ...META.get(e.transactionHash)! };
         }),
       );
       return { pool: Number(pool), settled: Number(settled), paid: Number(paid), rows, issued: issued.length };
@@ -54,7 +61,7 @@ export function BlindDesk() {
         {!data?.rows.length && <Empty>No claims yet. A hospital settles one by proof — nothing to review by hand.</Empty>}
         <div className="space-y-3">
           {(data?.rows ?? []).map(({ e, at, gas, from }) => (
-            <div key={e.transactionHash} className="rounded-xl border border-line p-4 fade-in">
+            <div key={e.transactionHash} className="rounded-md border border-line p-4 fade-in">
               <div className="flex flex-wrap justify-between gap-4">
                 <div>
                   <div className="text-2xl font-bold">{formatINR(Number(e.args.payout))}</div>

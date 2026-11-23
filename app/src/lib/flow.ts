@@ -28,6 +28,7 @@ import { c, getDemo, signerFor, Role, blockTime } from './chain';
 import { api, ipfsPut, ipfsGet, hospitalTree, claimStruct, getProver } from './zk';
 import { ring } from './keyring';
 import { kb, trace } from './trace';
+import { consentPriv, encPriv } from './wallet';
 
 export type Rail = 'stealth' | 'zcash';
 
@@ -139,7 +140,7 @@ export async function hospitalRequestConsent(o: {
 
 // ---------------- PATIENT: open request, verify terms, register record, sign ----------------
 export async function patientOpenRequest(patient: Role, item: any) {
-  const priv = getDemo().accounts[patient].privateKey;
+  const priv = await encPriv(patient);
   const k = await unwrapKey(item.request.key, priv);
   const payload = await openJSON(k, item.request.box);
   // Independently re-derive every number before signing (patient holds the policy, so it can).
@@ -172,8 +173,7 @@ export async function patientOpenRequest(patient: Role, item: any) {
 export async function patientApprove(patient: Role, item: any) {
   const { payload, checks, digest } = await patientOpenRequest(patient, item);
   if (!checks.digestMatches || !checks.payoutMatchesPolicy) throw new Error('claim terms do not match — refusing to sign');
-  const priv = getDemo().accounts[patient].privateKey;
-  const recordKey = await unwrapKey(payload.wrappedRecordKey, priv);
+  const recordKey = await unwrapKey(payload.wrappedRecordKey, await encPriv(patient));
   const bytes = await ipfsGet(payload.cid);
   const recordId = keccak256(toUtf8Bytes(`${getDemo().accounts[patient].address}:encounter:${payload.cid}`));
   const v = c(patient).vault;
@@ -181,7 +181,7 @@ export async function patientApprove(patient: Role, item: any) {
     await (await v.registerRecord(recordId, keccak256(bytes), payload.cid, 'encounter')).wait();
   }
   ring.update((r) => (r.recordKeys[recordId] = hexlify(recordKey)));
-  const signature = signConsent(consentKeyFor(priv, policyFor(patient).policyId).privateKey, digest);
+  const signature = signConsent(await consentPriv(patient, policyFor(patient).policyId), digest);
   trace({ kind: 'crypto', title: 'Signed consent with per-policy key', detail: `digest binds amount + payout address + nullifier · sig ${String(signature).slice(0, 14)}…`, vis: 'private' });
   await api(`/consent/${item.id}`, { signature, recordId });
   trace({ kind: 'net', title: 'Signature sent to the hospital', wire: '64-byte signature', vis: 'sealed' });
@@ -250,7 +250,7 @@ export async function openRecord(viewer: Role, recordId: string, purpose: string
     await (await v.logAccess(recordId, purpose)).wait(); // reverts if no access → audit trail of every view
     trace({ kind: 'chain', title: 'Access written to the on-chain audit trail first', detail: `purpose “${purpose}” — HealthVault reverts if the grant is revoked or expired`, vis: 'public' });
     const g = await v.getGrant(recordId, me);
-    key = await unwrapKey(JSON.parse(new TextDecoder().decode(getBytes(g.wrappedKey))), getDemo().accounts[viewer].privateKey);
+    key = await unwrapKey(JSON.parse(new TextDecoder().decode(getBytes(g.wrappedKey))), await encPriv(viewer));
   }
   const bytes = await ipfsGet(rec.cid);
   if (keccak256(bytes) !== rec.contentHash) throw new Error('IPFS content does not match on-chain hash');

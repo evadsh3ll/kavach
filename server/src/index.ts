@@ -10,11 +10,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 
 import { fileURLToPath } from 'node:url';
 import { hexlify, getBytes } from 'ethers';
 import { cidOf } from '@kavach/sdk';
-import { contracts, provider, signer } from '../../sdk/scripts/chain.js';
+import { contracts, deployment, provider, signer } from '../../sdk/scripts/chain.js';
 import { icdSearch, icdCount, hapiSample, checkFacility, checkClinician } from './clinical.js';
 import { startGhostPay, ghostPayStatus, bridgeInfo, registerZcashInstruction, zcashAddress } from './ghostpay.js';
 
-const DATA = fileURLToPath(new URL('../data/', import.meta.url));
+// testnet data lives apart from the throwaway local chain's (demo.sh wipes server/data on every run)
+const DATA = process.env.DATA_DIR ? process.env.DATA_DIR.replace(/\/?$/, '/') : fileURLToPath(new URL('../data/', import.meta.url));
 const IPFS = DATA + 'ipfs/';
 mkdirSync(IPFS, { recursive: true });
 const INBOX_FILE = DATA + 'inbox.json';
@@ -118,16 +119,37 @@ app.post('/api/relay/claim', async (c) => {
   try {
     await relayer.claims.submitClaim.staticCall(proof, claim); // never pay gas for a doomed tx
   } catch (e) {
+    console.error('relay: claim rejected in simulation:', errName(e));
     return c.json({ ok: false, reason: errName(e) }, 400);
   }
   try {
     const t0 = Date.now();
-    const tx = await relayer.claims.submitClaim(proof, claim);
-    const rc = await tx.wait();
+    // public RPCs are load-balanced: a lagging node can hand out a stale nonce → reset and retry
+    let tx: any;
+    for (let i = 0; ; i++) {
+      try {
+        tx = await relayer.claims.submitClaim(proof, claim);
+        break;
+      } catch (e: any) {
+        if (i >= 3 || !/nonce|replacement|already known/i.test(String(e?.shortMessage ?? e?.message))) throw e;
+        console.error('relay: stale nonce, retrying:', e?.shortMessage ?? e?.message);
+        (relayer.claims.runner as any).reset?.();
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    // once broadcast, keep polling for the receipt: one timed-out RPC call must not report a settled claim as failed
+    let rc: any = null;
+    for (let i = 0; i < 60 && !rc; i++) {
+      rc = await p.getTransactionReceipt(tx.hash).catch(() => null);
+      if (!rc) await new Promise((r) => setTimeout(r, 1500));
+    }
+    if (!rc) throw new Error('not confirmed after 90 s: ' + tx.hash);
+    if (rc.status === 0) throw new Error('reverted on-chain: ' + tx.hash);
     const out = { ok: true, txHash: tx.hash, block: rc.blockNumber, gasUsed: rc.gasUsed.toString(), confirmMs: Date.now() - t0 };
     relayLog.push({ at: Date.now(), claim, proof, meta, ...out });
     return c.json(out);
   } catch (e) {
+    console.error('relay: submit failed:', errName(e));
     return c.json({ ok: false, reason: errName(e) }, 500);
   }
 });
@@ -209,6 +231,58 @@ app.post('/api/ghostpay/zcash', async (c) => {
     return c.json({ ok: false, reason: e.message }, 400);
   }
 });
+
+// ---------------- event indexer ----------------
+// Public RPCs cap eth_getLogs (Base Sepolia: 200 blocks per call). We walk the chain in small chunks, keep every
+// event of our own contracts in memory, and answer the app's log queries from that — fast and range-free.
+const dep = deployment();
+const watched = Object.values(dep).filter((v): v is string => typeof v === 'string' && /^0x[0-9a-fA-F]{40}$/.test(v));
+const logs: any[] = [];
+let nextBlock = Number(dep.startBlock ?? 0);
+let indexed = nextBlock - 1;
+let indexing: Promise<void> | null = null;
+const STEP = Number(process.env.LOG_CHUNK ?? 200);
+function catchUp() {
+  if (!indexing)
+    indexing = (async () => {
+      const head = await p.getBlockNumber();
+      while (nextBlock <= head) {
+        const to = Math.min(nextBlock + STEP - 1, head);
+        const raw = await p.send('eth_getLogs', [{ address: watched, fromBlock: '0x' + nextBlock.toString(16), toBlock: '0x' + to.toString(16) }]);
+        logs.push(...raw);
+        indexed = to;
+        nextBlock = to + 1;
+      }
+    })().finally(() => (indexing = null));
+  return indexing;
+}
+(function loop() {
+  catchUp()
+    .catch((e) => console.error('indexer', e.message))
+    .finally(() => setTimeout(loop, 1500));
+})();
+const lower = (x: any) => (typeof x === 'string' ? x.toLowerCase() : x);
+const num = (b: any, dflt: number) => (b === undefined || b === null || b === 'latest' || b === 'pending' ? dflt : b === 'earliest' ? 0 : Number(b));
+app.post('/api/logs', async (c) => {
+  const f = await c.req.json();
+  // freshen the index, but never let a stalled RPC call hang the app: answer from what we have after 1.5 s
+  await Promise.race([catchUp().catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
+  const addrs = f.address ? (Array.isArray(f.address) ? f.address : [f.address]).map(lower) : null;
+  const from = num(f.fromBlock, 0);
+  const to = num(f.toBlock, indexed);
+  const topics: any[] = f.topics ?? [];
+  const out = logs.filter((l) => {
+    const bn = Number(l.blockNumber);
+    if (bn < from || bn > to) return false;
+    if (addrs && !addrs.includes(l.address.toLowerCase())) return false;
+    return topics.every((t, i) => t === null || t === undefined || (Array.isArray(t) ? t.map(lower).includes(lower(l.topics[i])) : lower(t) === lower(l.topics[i])));
+  });
+  return c.json(out);
+});
+
+// A stalled public-RPC call (timeouts, dropped connections) must never take the relayer down.
+process.on('unhandledRejection', (e: any) => console.error('unhandled (kept running):', e?.shortMessage ?? e?.message ?? e));
+process.on('uncaughtException', (e: any) => console.error('uncaught (kept running):', e?.shortMessage ?? e?.message ?? e));
 
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: app.fetch, port });

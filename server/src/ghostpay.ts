@@ -85,21 +85,32 @@ async function send(p: ZPayout) {
 /** Watches ClaimSettled; payouts addressed to the bridge (relayer) are forwarded to Zcash. */
 export async function startGhostPay(provider: JsonRpcProvider, c: { claims: any; token: any }) {
   const bridge = (await (c.claims.runner as any).getAddress()).toLowerCase();
-  c.claims.on('ClaimSettled', async (nullifier: string, _pc: string, _ins: string, payout: bigint, recipient: string, _d: bigint, ev: any) => {
+  // Poll in small block ranges: public RPCs drop server-side filters (eth_newFilter) and cap eth_getLogs at 200 blocks.
+  let from = (await provider.getBlockNumber()) + 1;
+  const handle = async (nullifier: string, payout: bigint, recipient: string, tx: string) => {
     if (recipient.toLowerCase() !== bridge) return;
     const ua = instructions.get(nullifier.toLowerCase());
-    if (!ua) return;
-    const p: ZPayout = {
-      nullifier,
-      ua,
-      inr: Number(payout),
-      zatoshi: Number(payout) * ZAT_PER_PAISE,
-      status: 'queued',
-      settledTx: ev?.log?.transactionHash,
-    };
+    if (!ua || payouts.some((x) => x.nullifier === nullifier)) return;
+    const p: ZPayout = { nullifier, ua, inr: Number(payout), zatoshi: Number(payout) * ZAT_PER_PAISE, status: 'queued', settledTx: tx };
     payouts.push(p);
     await send(p);
-  });
+  };
+  (async function poll() {
+    try {
+      const head = await provider.getBlockNumber();
+      while (from <= head) {
+        const to = Math.min(from + 199, head);
+        for (const ev of await c.claims.queryFilter(c.claims.filters.ClaimSettled(), from, to)) {
+          const [nullifier, , , payout, recipient] = (ev as any).args;
+          await handle(nullifier, payout, recipient, ev.transactionHash);
+        }
+        from = to + 1;
+      }
+    } catch (e: any) {
+      console.error('ghostpay poll', e?.shortMessage ?? e?.message);
+    }
+    setTimeout(poll, 3000);
+  })();
 }
 
 export const bridgeInfo = async (c: { claims: any }) => ({

@@ -26,7 +26,7 @@ const ok = (m) => console.log('✓', m);
 const login = await ctx.newPage();
 login.on('pageerror', (e) => errors.push(`login: ${e}`));
 await login.goto(`${BASE}/#/login`);
-await login.getByText('Who are you today?').waitFor();
+await login.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
 await shot(login, 'login');
 await login.getByRole('button', { name: /Sign in/ }).first().click();
 await login.waitForURL(/#\/vault/);

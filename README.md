@@ -63,6 +63,38 @@ Anon Aadhaar onboarding uses proofs generated once per patient (snarkjs takes ab
 node sdk/scripts/aadhaar-prove.mjs <patient-wallet-address>
 ```
 
+### Sign in with MetaMask
+
+`./scripts/demo.sh` creates a wallet for every role (`.role-wallets.json`, gitignored), funds each with 100 test ETH,
+deploys with the regulator's key, and writes **`ROLE-WALLETS.local.md`**: every role's address and private key, plus
+the network details.
+
+1. MetaMask → *Add network manually*: RPC `http://127.0.0.1:8545`, chain ID `31337`, currency `ETH`. The sign-in
+   page's *Add / switch network* button does this for you.
+2. *Import account* → paste the keys of the roles you want to play.
+3. Open <http://localhost:5173/#/login> → **Connect MetaMask** → pick the accounts → **Sign in** next to a role.
+
+Every transaction and signature now pops up in MetaMask. Decryption and consent keys are **derived from a MetaMask
+signature** (`personal_sign` is deterministic), so they are never stored anywhere and never touch the chain.
+Hospitals sign in with a staff key but never send transactions: the relayer does, so the hospital stays anonymous
+on-chain. Story mode, the Attack Lab and X-Ray keep using built-in keys so they run without pop-ups. After a chain
+restart, use MetaMask → Settings → Advanced → *Clear activity tab data* if a transaction gets stuck on a stale nonce.
+
+### Base Sepolia (live)
+
+Deployed: `ClaimSettlement` [`0x89f4C648…2580`](https://sepolia.basescan.org/address/0x89f4C64836068f613183B58853491CE9ad7c2580).
+
+```bash
+./scripts/run-testnet.sh                       # API + app against Base Sepolia; tx links open BaseScan
+DEPLOYER_KEY=0x… ./scripts/deploy-testnet.sh   # (re)deploy: fresh role wallets, patient Aadhaar proofs, fund, deploy, seed
+cd sdk && CHAIN_ID=84532 RPC_URL=https://base-sepolia-rpc.publicnode.com ROLE_KEYS=../.testnet-keys.json \
+  npx tsx scripts/renew-policy.ts asha         # give Asha a fresh full policy after test claims use up her cover
+```
+
+The deploy needs only ~0.001 ETH: the whole deploy is ~0.00014 ETH, each claim ~0.000024 ETH (mostly Base's L1 data
+fee for the 8.8 KB proof). In MetaMask, add the network with RPC `https://base-sepolia-rpc.publicnode.com` and chain
+ID `84532`, then import the keys from `ROLE-WALLETS.base-sepolia.md` (gitignored).
+
 ### Presenting: Live demo with role sign-in
 
 **Live demo** opens a sign-in screen with every party as a real wallet on the chain: 2 patients, 4 hospitals, the
@@ -182,6 +214,7 @@ cd contracts && forge test                  # 31 · real UltraHonk + real Anon A
 cd sdk && npx tsx scripts/leak-test.ts      # settles a claim, scans the entire chain for 16 private values
 cd e2e && node story.mjs                    # Story mode end-to-end, keyboard only
 cd e2e && node roles.mjs                    # Live demo by role sign-in: claim, sharing, revoke, break-glass, duplicate Aadhaar
+cd e2e && node metamask.mjs                 # the same, every role signing through a scripted MetaMask (EIP-1193)
 cd e2e && node smoke.mjs --flow --attacks   # every screen renders · claim settles · leak scan · 14 attacks
 cd e2e && node smoke.mjs --attacks          # every screen + all Attack Lab scenarios in Chromium
 cd e2e && node flows.mjs                    # share → audited open → revoke/re-key · break-glass · renewal

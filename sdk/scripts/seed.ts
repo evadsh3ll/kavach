@@ -23,6 +23,8 @@ import {
   wrapKey,
   splitSecret,
   consentKeyFor,
+  encryptionKeyFor,
+  FIELD_MODULUS,
   lookupFacilitySnapshot,
   verifyFacility,
   lookupClinicianSnapshot,
@@ -35,7 +37,7 @@ const DAY = 86400;
 const p = provider();
 const d = deployment();
 const now = (await p.getBlock('latest'))!.timestamp;
-const ipfsDir = `${ROOT}server/data/ipfs/`;
+const ipfsDir = `${process.env.DATA_DIR ? process.env.DATA_DIR.replace(/\/?$/, '/') : ROOT + 'server/data/'}ipfs/`;
 mkdirSync(ipfsDir, { recursive: true });
 
 async function putIpfs(bytes: Uint8Array) {
@@ -51,8 +53,11 @@ const wallet = (r: keyof typeof ROLES) => new Wallet(ANVIL_KEYS[ROLES[r]]);
 
 console.log('· hospitals');
 const hospitals = [] as any[];
+// Stable per wallets file (derived from the regulator's key), so hospital staff keys imported into MetaMask
+// survive a chain restart. Still unguessable without that key.
+const hospitalSecret = (hfrId: string) => BigInt(keccak256(toUtf8Bytes(`mohar:hospital-secret:${ANVIL_KEYS[0]}:${hfrId}`))) % FIELD_MODULUS;
 for (const h of HOSPITALS) {
-  const secret = randomField();
+  const secret = hospitalSecret(h.hfrId);
   const leaf = await hospitalLeaf(secret);
   await (await relay.regulator.requestListing(h.name, h.hfrId, toHex32(leaf))).wait();
   hospitals.push({ ...h, secret: toHex32(secret), leaf: toHex32(leaf) });
@@ -131,7 +136,7 @@ console.log('· clinicians (NMC)');
 console.log('· encryption keys');
 for (const r of ['patient', 'patient2', 'doctor', 'guardian1', 'guardian2', 'guardian3', 'responder', 'lab', 'pharmacy'] as const) {
   const c = contracts(signer(r, p));
-  await (await c.vault.registerKey(wallet(r).signingKey.publicKey)).wait();
+  await (await c.vault.registerKey(encryptionKeyFor(wallet(r).privateKey).publicKey)).wait(); // signature-derived, so MetaMask can reproduce it
 }
 
 console.log('· Asha: past record + emergency card + guardians');
@@ -174,7 +179,7 @@ const em = await addRecord('emergency-card', card);
 const shares = splitSecret(em.key, 3, 2);
 const guardians = (['guardian1', 'guardian2', 'guardian3'] as const).map(wallet);
 const wrapped = await Promise.all(
-  shares.map(async (s, i) => toUtf8Bytes(JSON.stringify({ x: s.x, w: await wrapKey(getBytes(s.y), guardians[i].signingKey.publicKey) }))),
+  shares.map(async (s, i) => toUtf8Bytes(JSON.stringify({ x: s.x, w: await wrapKey(getBytes(s.y), encryptionKeyFor(guardians[i].privateKey).publicKey) }))),
 );
 await (await ashaVault.breakGlass.setGuardians(guardians.map((g) => g.address), em.recordId, wrapped)).wait();
 
@@ -182,7 +187,18 @@ const accounts = Object.fromEntries(
   Object.entries(ROLES).map(([r, i]) => [r, { address: new Wallet(ANVIL_KEYS[i]).address, privateKey: ANVIL_KEYS[i] }]),
 );
 
+// Hospitals never send transactions; their staff sign in with a key derived from the hospital secret.
+const staffKey = (secret: string) => keccak256(toUtf8Bytes('staff:' + secret));
+for (const h of hospitals) h.staff = new Wallet(staffKey(h.secret)).address;
+const net = await p.getNetwork();
+const chainId = Number(net.chainId);
+const network =
+  chainId === 84532
+    ? { chainId, name: 'Base Sepolia', publicRpc: 'https://base-sepolia-rpc.publicnode.com', explorer: 'https://sepolia.basescan.org', currency: 'ETH' }
+    : { chainId, name: 'Mohar local chain', publicRpc: process.env.PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545', explorer: null, currency: 'ETH' };
+
 const demo = {
+  network,
   _warning: 'DEMO ONLY — local Anvil keys and secrets. In production each party holds its own keys.',
   rpc: process.env.PUBLIC_RPC_URL ?? 'http://127.0.0.1:8545',
   deployment: d,
@@ -209,5 +225,29 @@ const demo = {
 };
 mkdirSync(`${ROOT}app/public`, { recursive: true });
 writeFileSync(`${ROOT}app/public/demo.json`, JSON.stringify(demo, null, 2));
+if (chainId !== 31337) writeFileSync(`${ROOT}.demo-${chainId}.json`, JSON.stringify(demo, null, 2), { mode: 0o600 }); // kept safe from demo.sh
+// A private cheat-sheet for importing the role wallets into MetaMask (gitignored).
+{
+  const rows = Object.entries(ROLES)
+    .filter(([r]) => r !== 'relayer')
+    .map(([r, i]) => `| ${(demo.names as any)[r]} | ${r} | \`${new Wallet(ANVIL_KEYS[i]).address}\` | \`${ANVIL_KEYS[i]}\` |`);
+  const staff = hospitals.map((h: any) => `| ${h.name} (staff) | hospital | \`${h.staff}\` | \`${staffKey(h.secret)}\` |`);
+  const md = [
+    '# Mohar role wallets — PRIVATE, test networks only',
+    '',
+    `Network: **${network.name}** · chain ID \`${network.chainId}\` · RPC \`${network.publicRpc}\``,
+    '',
+    'MetaMask → Add network manually with the values above, then Import account → paste a private key.',
+    'Connect all the accounts you imported to the site; each browser tab can sign as a different one.',
+    'Hospital staff keys hold no ETH: hospitals only sign in, they never send transactions (a relayer does).',
+    '',
+    '| Who | Role | Address | Private key |',
+    '|---|---|---|---|',
+    ...rows,
+    ...staff,
+    '',
+  ].join('\n');
+  writeFileSync(`${ROOT}ROLE-WALLETS.${chainId === 84532 ? 'base-sepolia' : 'local'}.md`, md, { mode: 0o600 });
+}
 console.log('✓ seeded. root', toHex32(tree.root));
 process.exit(0);

@@ -1,19 +1,17 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Check as CheckIcon, Globe, Lock, X as XIcon } from 'lucide-react';
 
-export function Card({ title, sub, right, children, className = '', icon }: { title?: ReactNode; sub?: ReactNode; right?: ReactNode; children?: ReactNode; className?: string; icon?: ReactNode }) {
+/** A document section: a hairline rule, a title, then content. Not a floating box. */
+export function Card({ title, sub, right, children, className = '' }: { title?: ReactNode; sub?: ReactNode; right?: ReactNode; children?: ReactNode; className?: string; icon?: ReactNode }) {
   return (
-    <section className={`card p-5 ${className}`}>
+    <section className={`border-t border-line pt-5 ${className}`}>
       {(title || right) && (
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex gap-3">
-            {icon && <div className="mt-0.5 text-muted">{icon}</div>}
-            <div>
-              {title && <h3 className="font-semibold text-[15px] tracking-tight">{title}</h3>}
-              {sub && <p className="text-[13px] text-muted mt-0.5 leading-relaxed">{sub}</p>}
-            </div>
+        <div className="flex items-start justify-between gap-6 mb-4">
+          <div className="min-w-0">
+            {title && <h2 className="font-semibold text-[16px] tracking-[-0.01em]">{title}</h2>}
+            {sub && <p className="text-[13.5px] text-muted mt-1 leading-relaxed max-w-2xl">{sub}</p>}
           </div>
-          {right}
+          {right && <div className="shrink-0">{right}</div>}
         </div>
       )}
       {children}
@@ -22,12 +20,12 @@ export function Card({ title, sub, right, children, className = '', icon }: { ti
 }
 
 const tones: Record<string, string> = {
-  violet: 'bg-violet/10 text-violet',
-  mint: 'bg-mint/10 text-mint',
-  rose: 'bg-rose/10 text-rose',
-  amber: 'bg-amber/12 text-amber',
-  sky: 'bg-sky/10 text-sky',
-  gray: 'bg-text/5 text-muted',
+  violet: 'bg-text/[.06] text-text',
+  mint: 'bg-mint/[.08] text-mint',
+  rose: 'bg-rose/[.08] text-rose',
+  amber: 'bg-amber/[.10] text-amber',
+  sky: 'bg-text/[.06] text-sky',
+  gray: 'bg-text/[.05] text-muted',
   ink: 'bg-text text-ink',
 };
 export const Chip = ({ tone = 'gray', children }: { tone?: string; children: ReactNode }) => <span className={`chip ${tones[tone]}`}>{children}</span>;
@@ -55,13 +53,14 @@ export function Redacted({ text, show = false, hint }: { text: string; show?: bo
   );
 }
 
+/** A figure in a statement row: label above, value below, a rule on top. */
 export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: string }) {
-  const color = tone === 'mint' ? 'text-mint' : tone === 'rose' ? 'text-rose' : tone === 'violet' ? 'text-violet' : tone === 'sky' ? 'text-sky' : '';
+  const color = tone === 'mint' ? 'text-mint' : tone === 'rose' ? 'text-rose' : '';
   return (
-    <div className="card p-4">
+    <div className="border-t border-text/80 pt-2.5">
       <div className="label">{label}</div>
-      <div className={`serif text-[28px] leading-tight mt-1 tracking-tight ${color}`}>{value}</div>
-      {hint && <div className="text-xs text-muted mt-1">{hint}</div>}
+      <div className={`text-[22px] font-semibold tracking-[-0.02em] leading-tight mt-0.5 ${color}`}>{value}</div>
+      {hint && <div className="text-[12.5px] text-muted mt-0.5">{hint}</div>}
     </div>
   );
 }
@@ -103,11 +102,14 @@ export function useAsync<T>(fn: () => Promise<T>, deps: any[] = [], pollMs?: num
   const [data, setData] = useState<T | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const inflight = useRef(false);
   useEffect(() => {
     let alive = true;
+    inflight.current = true;
     fn()
       .then((d) => alive && (setData(d), setErr(null)))
-      .catch((e) => alive && setErr(String(e?.message ?? e)));
+      .catch((e) => alive && setErr(String(e?.message ?? e)))
+      .finally(() => (inflight.current = false));
     return () => {
       alive = false;
     };
@@ -115,8 +117,18 @@ export function useAsync<T>(fn: () => Promise<T>, deps: any[] = [], pollMs?: num
   }, [...deps, tick]);
   useEffect(() => {
     if (!pollMs) return;
-    const t = setInterval(() => setTick((x) => x + 1), pollMs);
-    return () => clearInterval(t);
+    // Polls never overlap (a slow network must not pile requests up — browsers allow only ~6 connections per site
+    // across ALL tabs), and background tabs pause, so one presenter can keep several role tabs open.
+    const t = setInterval(() => {
+      if (inflight.current || document.hidden) return;
+      setTick((x) => x + 1);
+    }, pollMs);
+    const onShow = () => !document.hidden && !inflight.current && setTick((x) => x + 1);
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onShow);
+    };
   }, [pollMs]);
   return { data, err, reload: () => setTick((x) => x + 1) };
 }
@@ -135,7 +147,7 @@ export function Timer({ running, ms }: { running: boolean; ms?: number }) {
 
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="text-sm text-muted boundary p-6 text-center">
+    <div className="text-[13.5px] text-muted py-2">
       {children}
       {action && <div className="mt-3">{action}</div>}
     </div>

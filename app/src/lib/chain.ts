@@ -1,4 +1,5 @@
-import { Contract, JsonRpcProvider, Wallet, NonceManager, Interface } from 'ethers';
+import { AbstractSigner, Contract, FetchRequest, JsonRpcProvider, Wallet, NonceManager, Interface } from 'ethers';
+import { metaMaskSigner, viaMetaMask } from './wallet';
 import abi from '../abi.json';
 import { patchTrace, trace } from './trace';
 
@@ -35,7 +36,29 @@ const signers = new Map<Role, NonceManager>();
 export async function loadDemo(): Promise<Demo> {
   if (demo) return demo;
   demo = await (await fetch('/demo.json', { cache: 'no-store' })).json();
-  provider = new JsonRpcProvider(location.origin + '/rpc', undefined, { staticNetwork: true, pollingInterval: 700, cacheTimeout: -1 } as any);
+  const req = new FetchRequest(location.origin + '/rpc');
+  req.timeout = 15_000; // fail fast (then retry) instead of ethers' 5-minute default when a request stalls
+  provider = new JsonRpcProvider(req, undefined, { staticNetwork: true, pollingInterval: 700, cacheTimeout: -1 } as any);
+  // Log queries go to our API's event index: public RPCs cap eth_getLogs ranges (Base Sepolia: 200 blocks).
+  const raw = provider.send.bind(provider);
+  // retry transient network failures (dropped connections, VPN/network switches) — never JSON-RPC errors
+  const send = async (method: string, params: any[]): Promise<any> => {
+    for (let i = 0; ; i++) {
+      try {
+        return await raw(method, params);
+      } catch (e: any) {
+        const transient = ['NETWORK_ERROR', 'TIMEOUT', 'SERVER_ERROR'].includes(e?.code) || /fetch|network|ECONN|socket/i.test(String(e?.message));
+        if (!transient || i >= 3 || e?.info?.error || e?.error?.code) throw e;
+        await new Promise((r) => setTimeout(r, 300 * (i + 1)));
+      }
+    }
+  };
+  provider.send = async (method: string, params: any[]) => {
+    if (method !== 'eth_getLogs') return send(method, params);
+    const r = await fetch('/api/logs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(params[0] ?? {}) });
+    if (!r.ok) return send(method, params);
+    return r.json();
+  };
   return demo;
 }
 
@@ -104,7 +127,58 @@ class TracedSigner extends NonceManager {
   }
 }
 
-export function signerFor(role: Role) {
+/** Signs through MetaMask. Gas is estimated against our own RPC first, so a revert shows its real reason
+ *  before any wallet pop-up (and nobody is asked to sign a transaction that would fail). */
+class MetaMaskTracedSigner extends AbstractSigner {
+  constructor(private role: Role) {
+    super(provider);
+  }
+  private inner() {
+    return metaMaskSigner(demo.accounts[this.role].address);
+  }
+  async getAddress() {
+    return demo.accounts[this.role].address;
+  }
+  connect(): any {
+    return this;
+  }
+  async signTransaction(): Promise<string> {
+    throw new Error('MetaMask signs and sends in one step');
+  }
+  signMessage(m: any) {
+    return this.inner().signMessage(m);
+  }
+  signTypedData(d: any, t: any, v: any) {
+    return this.inner().signTypedData(d, t, v);
+  }
+  async sendTransaction(tx: any): Promise<any> {
+    const what = describeCall(tx.to, tx.data);
+    const from = await this.getAddress();
+    try {
+      await provider.estimateGas({ ...tx, from });
+    } catch (e) {
+      trace({ kind: 'fail', title: `${what} would revert`, detail: revertReason(e), where: 'chain' });
+      throw e;
+    }
+    const ev0 = trace({ kind: 'chain', title: `Waiting for MetaMask: ${what}`, detail: `confirm in your wallet as ${demo.names[this.role] ?? this.role}` });
+    const sent = await this.inner().sendTransaction(tx);
+    patchTrace(ev0.id, { title: `tx ${what}`, detail: `signed in MetaMask by ${demo.names[this.role] ?? this.role}`, tx: sent.hash, vis: 'public' });
+    (sent as any).wait = async (confirms?: number) => {
+      const rc = await provider.waitForTransaction(sent.hash, confirms ?? 1);
+      if (!rc || rc.status === 0) throw Object.assign(new Error(`${what} reverted`), { receipt: rc });
+      patchTrace(ev0.id, { block: rc.blockNumber, gas: Number(rc.gasUsed) });
+      return rc;
+    };
+    return sent;
+  }
+}
+const mmSigners = new Map<Role, MetaMaskTracedSigner>();
+
+export function signerFor(role: Role): AbstractSigner {
+  if (viaMetaMask(role)) {
+    if (!mmSigners.has(role)) mmSigners.set(role, new MetaMaskTracedSigner(role));
+    return mmSigners.get(role)!;
+  }
   if (!signers.has(role)) signers.set(role, new TracedSigner(role, new Wallet(demo.accounts[role].privateKey, provider)));
   return signers.get(role)!;
 }
@@ -150,7 +224,8 @@ const errFrags = Object.values(abi).flat().filter((x: any) => x.type === 'error'
 const allErrors = new Interface([...new Map(errFrags.map((x: any) => [x.name + JSON.stringify(x.inputs), x])).values()] as any);
 export function revertReason(e: any): string {
   if (e?.revert?.name) return e.revert.name;
-  const data = e?.data ?? e?.info?.error?.data ?? e?.error?.data;
+  const data = e?.data?.data ?? e?.data ?? e?.info?.error?.data?.data ?? e?.info?.error?.data ?? e?.error?.data?.data ?? e?.error?.data;
+  if (e?.code === 4001 || e?.code === 'ACTION_REJECTED' || e?.info?.error?.code === 4001) return 'Rejected in MetaMask';
   if (typeof data === 'string' && data.length >= 10) {
     try {
       return allErrors.parseError(data)!.name;

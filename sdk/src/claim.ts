@@ -55,12 +55,23 @@ export async function consentDigest(pub: Omit<ClaimPublic, 'hospitalRoot' | 'use
  * The wallet's own public key is visible on-chain once it transacts; the consent key never is, so a
  * policy commitment cannot be linked to the patient's wallet even by brute-forcing known keys.
  */
-export const consentKeyMessage = (policyId: bigint) => `Kavach consent key v1\npolicy ${toHex32(policyId)}`;
+export const consentKeyMessage = (policyId: bigint) => `Mohar consent key v1\npolicy ${toHex32(policyId)}`;
 export function consentKeyFromSignature(signature: string): SigningKey {
   return new SigningKey(keccak256(getBytes(signature)));
 }
 export function consentKeyFor(walletPrivKey: string, policyId: bigint): SigningKey {
   return consentKeyFromSignature(new Wallet(walletPrivKey).signMessageSync(consentKeyMessage(policyId)));
+}
+
+/** Per-wallet ENCRYPTION key (ECIES), derived from a wallet signature over a fixed message.
+ *  MetaMask can't decrypt for us, but personal_sign is deterministic (RFC 6979), so any wallet —
+ *  MetaMask or a raw key — reproduces the same key on demand, and it never touches the chain. */
+export const encryptionKeyMessage = 'Mohar encryption key v1\n\nSigning this derives your private decryption key on this device. It is never sent anywhere.';
+export function encryptionKeyFromSignature(signature: string): SigningKey {
+  return new SigningKey(keccak256(getBytes(signature)));
+}
+export function encryptionKeyFor(walletPrivKey: string): SigningKey {
+  return encryptionKeyFromSignature(new Wallet(walletPrivKey).signMessageSync(encryptionKeyMessage));
 }
 
 /** Patient side: sign the exact claim terms (raw digest, no Ethereum prefix — verified in-circuit). */
